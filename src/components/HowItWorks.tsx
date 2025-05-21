@@ -56,10 +56,10 @@ const StepCard = ({ step, index }: StepCardProps) => (
     "transform transition-all duration-300 hover:-translate-y-2",
     "flex flex-col items-center text-center"
   )}>
-    <div className="w-16 h-16 mb-6 rounded-full bg-trackslip-teal/20 flex items-center justify-center text-trackslip-teal">
+    <div className="w-16 h-16 mb-6 rounded-full gradient-blue bg-opacity-20 flex items-center justify-center text-white">
       {step.icon}
     </div>
-    <div className="mb-2 text-trackslip-teal font-bold">Step {index + 1}</div>
+    <div className="mb-2 gradient-blue-text font-bold">Step {index + 1}</div>
     <h3 className="text-xl font-bold mb-4">{step.title}</h3>
     <p className="text-gray-400">{step.description}</p>
   </div>
@@ -75,7 +75,7 @@ const HowItWorks = () => {
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
-          <div className="w-20 h-1 bg-trackslip-teal mx-auto"></div>
+          <div className="w-20 h-1 gradient-blue mx-auto"></div>
           <p className="mt-4 text-xl text-gray-400 max-w-2xl mx-auto">
             TrackSlip simplifies expense tracking in three easy steps
           </p>

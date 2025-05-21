@@ -49,7 +49,7 @@ const PricingSection = () => {
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple Transparent Pricing</h2>
-          <div className="w-20 h-1 bg-trackslip-teal mx-auto"></div>
+          <div className="w-20 h-1 gradient-blue mx-auto"></div>
           <p className="mt-4 text-xl text-gray-400 max-w-2xl mx-auto">
             Choose the plan that works best for your needs
           </p>
@@ -60,31 +60,31 @@ const PricingSection = () => {
             <Card 
               key={index} 
               className={cn(
-                "bg-trackslip-darker border-gray-800",
-                plan.highlighted && "border-trackslip-teal ring-1 ring-trackslip-teal"
+                "bg-trackslip-darker border-gray-800 text-white",
+                plan.highlighted && "border-trackslip-blue ring-1 ring-trackslip-blue"
               )}
             >
               <CardHeader className="pb-0">
                 {plan.highlighted && (
-                  <div className="py-1 px-3 bg-trackslip-teal text-black text-xs font-bold uppercase tracking-wider rounded-full inline-block mb-4">
+                  <div className="py-1 px-3 gradient-blue text-black text-xs font-bold uppercase tracking-wider rounded-full inline-block mb-4">
                     Most Popular
                   </div>
                 )}
-                <h3 className="text-2xl font-bold">{plan.name}</h3>
+                <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
               </CardHeader>
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 text-white">
                 <div className="mb-4">
-                  <span className="text-4xl font-bold">${plan.price}</span>
+                  <span className="text-4xl font-bold text-white">${plan.price}</span>
                   {plan.period && <span className="text-gray-400 ml-2">/{plan.period}</span>}
                 </div>
                 <p className="text-gray-400 mb-6">{plan.description}</p>
                 <ul className="space-y-3">
                   {plan.features.map((feature, idx) => (
                     <li key={idx} className="flex items-start">
-                      <svg className="h-6 w-6 mr-2 text-trackslip-teal flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-6 w-6 mr-2 gradient-blue-text flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      <span>{feature}</span>
+                      <span className="text-gray-300">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -94,7 +94,7 @@ const PricingSection = () => {
                   className={cn(
                     "w-full",
                     plan.highlighted 
-                      ? "bg-trackslip-teal hover:bg-trackslip-teal/90 text-trackslip-dark" 
+                      ? "gradient-blue text-white" 
                       : "bg-white/10 hover:bg-white/20 text-white"
                   )}
                 >
