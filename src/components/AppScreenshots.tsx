@@ -29,13 +29,13 @@ const AppScreenshots = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-20 bg-trackslip-dark relative overflow-hidden" id="app">
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/0 via-trackslip-blue/5 to-black/0 pointer-events-none"></div>
+    <section ref={sectionRef} className="py-20 bg-black relative overflow-hidden" id="app">
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/0 via-trackslip-purple/5 to-black/0 pointer-events-none"></div>
       
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-radio font-normal mb-4 opacity-0 animate-on-scroll">App Screenshots</h2>
-          <div className="w-20 h-0.5 gradient-blue mx-auto"></div>
+          <div className="w-20 h-0.5 bg-trackslip-teal mx-auto"></div>
           <p className="mt-6 text-lg text-gray-400 max-w-2xl mx-auto font-radio opacity-0 animate-on-scroll">
             See TrackSlip in action on your mobile device
           </p>

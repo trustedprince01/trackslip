@@ -39,7 +39,7 @@ const Index = () => {
     <div className="min-h-screen bg-trackslip-dark text-white font-radio">
       <Header />
       <HeroSection />
-      <div className="bg-trackslip-dark">
+      <div className="bg-trackslip-deepdark">
         <HowItWorks />
         <FeaturesSection />
         <AppScreenshots />

@@ -58,11 +58,11 @@ export default {
 				},
 				trackslip: {
 				  purple: '#8B5CF6',
-				  blue: '#3b82f6',
-				  lightBlue: '#60a5fa',
-				  dark: 'rgb(2,2,6)',
+				  teal: '#2DD4BF',
+				  dark: '#121212',
 				  darker: '#090909',
 				  light: '#f8f8f8',
+				  blue: '#3b82f6',
 				  deepdark: '#010106'
 				},
 				sidebar: {
