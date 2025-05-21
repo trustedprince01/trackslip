@@ -25,7 +25,10 @@ const testimonials = [
 
 const Testimonials = () => {
   return (
-    <section className="py-20 bg-trackslip-dark">
+    <section 
+      className="py-20"
+      style={{ backgroundColor: 'rgb(2,2,7)' }}
+    >
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Users Say</h2>

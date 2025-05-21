@@ -4,31 +4,39 @@ import { cn } from '@/lib/utils';
 
 const steps = [
   {
-    title: "Snap a photo",
-    description: "Take a quick picture of any receipt with your phone camera.",
+    title: "Upload a photo",
+    description: "Upload any receipt from your device.",
     icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
+      <img 
+        src="/camera.svg" 
+        alt="Upload photo" 
+        className="h-8 w-8" 
+        style={{ width: '2rem', height: '2rem' }}
+      />
     )
   },
   {
     title: "AI instantly extracts all details",
     description: "Our advanced AI recognizes and extracts store name, items, prices, and dates automatically.",
     icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-      </svg>
+      <img 
+        src="/chip.svg" 
+        alt="AI chip" 
+        className="h-8 w-8" 
+        style={{ width: '2rem', height: '2rem' }}
+      />
     )
   },
   {
     title: "View organized spending data",
     description: "Access insights about your spending patterns and identify saving opportunities.",
     icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
+      <img 
+        src="/chart.svg" 
+        alt="Chart" 
+        className="h-8 w-8" 
+        style={{ width: '2rem', height: '2rem' }}
+      />
     )
   }
 ];
@@ -59,7 +67,11 @@ const StepCard = ({ step, index }: StepCardProps) => (
 
 const HowItWorks = () => {
   return (
-    <section id="how-it-works" className="py-20 bg-trackslip-dark">
+    <section 
+      id="how-it-works" 
+      className="py-20"
+      style={{ backgroundColor: 'rgb(2,2,7)' }}
+    >
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>

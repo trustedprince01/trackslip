@@ -7,7 +7,7 @@ const HeroSection = () => {
     <section 
       className="relative min-h-screen w-full flex items-center justify-center overflow-hidden"
       style={{
-        backgroundImage: `url('/lovable-uploads/279a9431-8e34-49b7-96bc-1b658504fa6f.png')`,
+        backgroundImage: `url('/images/background.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundColor: '#000'

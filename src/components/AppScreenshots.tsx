@@ -42,28 +42,49 @@ const AppScreenshots = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll">
-            <CardContent className="p-1">
-              <div className="aspect-[9/16] bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center rounded-md">
-                <p className="text-gray-400 text-center px-6 font-radio">Receipt Scanning Process</p>
+          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll flex flex-col">
+            <CardContent className="p-1 flex-1">
+              <div className="aspect-[9/16] overflow-hidden rounded-md">
+                <img 
+                  src="/images/scan.png" 
+                  alt="Receipt Scanning Process" 
+                  className="w-full h-full object-cover"
+                />
               </div>
             </CardContent>
+            <div className="p-4 text-center">
+              <p className="text-gray-400 font-radio">Scan Receipt</p>
+            </div>
           </Card>
           
-          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll">
-            <CardContent className="p-1">
-              <div className="aspect-[9/16] bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center rounded-md">
-                <p className="text-gray-400 text-center px-6 font-radio">Analysis Screen</p>
+          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll flex flex-col">
+            <CardContent className="p-1 flex-1">
+              <div className="aspect-[9/16] overflow-hidden rounded-md">
+                <img 
+                  src="/images/analysis.png" 
+                  alt="Analysis Screen" 
+                  className="w-full h-full object-cover"
+                />
               </div>
             </CardContent>
+            <div className="p-4 text-center">
+              <p className="text-gray-400 font-radio">Analysis Screen</p>
+            </div>
           </Card>
           
-          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll">
-            <CardContent className="p-1">
-              <div className="aspect-[9/16] bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center rounded-md">
-                <p className="text-gray-400 text-center px-6 font-radio">Dashboard View</p>
+          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll flex flex-col">
+            <CardContent className="p-1 flex-1">
+              <div className="aspect-[9/16] overflow-hidden rounded-md">
+                <img 
+                  src="/images/dashboard.png" 
+                  alt="Dashboard View" 
+                  className="w-full h-full object-cover"
+                />
               </div>
             </CardContent>
+            <div className="p-4 text-center">
+              <p className="text-gray-400 font-radio">Dashboard View</p>
+            </div>
           </Card>
         </div>
       </div>

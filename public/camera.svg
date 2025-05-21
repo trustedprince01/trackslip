@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32" viewBox="0 0 8.467 8.467" id="camera">
+  <defs>
+    <linearGradient id="a">
+      <stop offset="0" stop-color="#0952ec"></stop>
+      <stop offset="1" stop-color="#589dee"></stop>
+    </linearGradient>
+    <linearGradient id="b">
+      <stop offset="0" stop-color="#a2cdf5"></stop>
+      <stop offset="1" stop-color="#589dee"></stop>
+    </linearGradient>
+    <linearGradient xlink:href="#a" id="c" x1="7.938" x2=".529" y1="292.767" y2="292.767" gradientUnits="userSpaceOnUse"></linearGradient>
+    <linearGradient xlink:href="#b" id="d" x1="2.91" x2="5.556" y1="293.031" y2="293.031" gradientUnits="userSpaceOnUse"></linearGradient>
+  </defs>
+  <g transform="translate(0 -288.533)">
+    <path fill="url(#c)" d="m 3.1757812,290.12109 c -0.1405292,0 -0.275622,0.0549 -0.375,0.1543 l -0.375,0.375 H 1.0585938 c -0.29234151,0 -0.52929692,0.23696 -0.52929692,0.5293 v 3.70312 c 0,0.29234 0.23695541,0.5293 0.52929692,0.5293 h 6.3496093 c 0.2923415,0 0.5292969,-0.23696 0.5292969,-0.5293 v -3.70312 c 0,-0.29234 -0.2369554,-0.5293 -0.5292969,-0.5293 H 6.0390625 l -0.3730469,-0.375 c -0.099118,-0.0996 -0.2344708,-0.1543 -0.375,-0.1543 z" color="#000" font-family="sans-serif" font-weight="400" overflow="visible" style="line-height:normal;font-variant-ligatures:normal;font-variant-position:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-alternates:normal;font-feature-settings:normal;text-indent:0;text-align:start;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000;text-transform:none;text-orientation:mixed;shape-padding:0;isolation:auto;mix-blend-mode:normal"></path>
+    <path fill="#fff" fill-rule="evenodd" d="M 1.8520833,291.70833 A 0.26458332,0.26458332 0 0 1 1.5875,291.97291 0.26458332,0.26458332 0 0 1 1.3229167,291.70833 0.26458332,0.26458332 0 0 1 1.5875,291.44375 a 0.26458332,0.26458332 0 0 1 0.2645833,0.26458 z" paint-order="stroke fill markers"></path>
+    <path fill="url(#d)" fill-rule="evenodd" d="m 5.55625,293.03125 a 1.3229166,1.3229166 0 0 1 -1.3229166,1.32292 1.3229166,1.3229166 0 0 1 -1.3229166,-1.32292 1.3229166,1.3229166 0 0 1 1.3229166,-1.32292 1.3229166,1.3229166 0 0 1 1.3229166,1.32292 z" paint-order="stroke fill markers"></path>
+  </g>
+</svg>
