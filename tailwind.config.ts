@@ -19,6 +19,9 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				'radio': ['"Radio Grotesk"', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -58,7 +61,8 @@ export default {
 				  teal: '#2DD4BF',
 				  dark: '#121212',
 				  darker: '#090909',
-				  light: '#f8f8f8'
+				  light: '#f8f8f8',
+				  blue: '#3b82f6'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
@@ -96,12 +100,17 @@ export default {
 				'float': {
 					'0%, 100%': { transform: 'translateY(0)' },
 					'50%': { transform: 'translateY(-10px)' },
+				},
+				'reveal': {
+					'0%': { opacity: '0', transform: 'translateY(20px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' },
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'float': 'float 3s ease-in-out infinite',
+				'reveal': 'reveal 0.5s ease-out forwards',
 			}
 		}
 	},
