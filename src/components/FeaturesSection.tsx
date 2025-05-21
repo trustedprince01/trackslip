@@ -46,7 +46,7 @@ const FeaturesSection = () => {
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Core Features</h2>
-          <div className="w-20 h-1 bg-trackslip-teal mx-auto"></div>
+          <div className="w-20 h-1 gradient-blue mx-auto"></div>
           <p className="mt-4 text-xl text-gray-400 max-w-2xl mx-auto">
             Designed to eliminate the hassle of manual receipt tracking
           </p>
@@ -55,7 +55,7 @@ const FeaturesSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {features.map((feature, index) => (
             <div key={index} className="flex gap-6">
-              <div className="flex-shrink-0 text-trackslip-teal">
+              <div className="flex-shrink-0 gradient-blue-text">
                 {feature.icon}
               </div>
               <div>
