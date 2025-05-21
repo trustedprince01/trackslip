@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/HowItWorks";
@@ -19,15 +19,16 @@ const Index = () => {
         const position = element.getBoundingClientRect();
         
         // If element is in viewport
-        if(position.top < window.innerHeight && position.bottom >= 0) {
-          element.classList.add('animate-reveal');
+        if (position.top < window.innerHeight * 0.85 && position.bottom >= 0) {
+          element.classList.add('animate-scroll-reveal');
+          element.style.opacity = '1';
         }
       });
     };
     
     window.addEventListener('scroll', handleScroll);
     // Initial check
-    setTimeout(handleScroll, 100);
+    setTimeout(handleScroll, 300);
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -35,16 +36,18 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white font-radio">
+    <div className="min-h-screen bg-trackslip-dark text-white font-radio">
       <Header />
       <HeroSection />
-      <HowItWorks />
-      <FeaturesSection />
-      <AppScreenshots />
-      <Testimonials />
-      <PricingSection />
-      <FaqSection />
-      <Footer />
+      <div className="bg-trackslip-deepdark">
+        <HowItWorks />
+        <FeaturesSection />
+        <AppScreenshots />
+        <Testimonials />
+        <PricingSection />
+        <FaqSection />
+        <Footer />
+      </div>
     </div>
   );
 };
