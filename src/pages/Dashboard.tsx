@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,10 @@ const Dashboard = () => {
 
   const handleLogout = () => {
     navigate("/login");
+  };
+
+  const handleAddExpense = () => {
+    navigate("/new-expense");
   };
 
   return (
@@ -155,7 +158,7 @@ const Dashboard = () => {
         {/* Floating Action Button */}
         <Button 
           className="absolute bottom-20 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue hover:opacity-90 shadow-lg"
-          onClick={() => setIsExpenseModalOpen(true)}
+          onClick={handleAddExpense}
         >
           <Plus className="h-6 w-6" />
         </Button>
