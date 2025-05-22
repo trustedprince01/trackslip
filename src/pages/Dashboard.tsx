@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,10 @@ const Dashboard = () => {
 
   const handleAddExpense = () => {
     navigate("/new-expense");
+  };
+
+  const handleSettingsClick = () => {
+    navigate("/settings");
   };
 
   return (
@@ -186,7 +191,11 @@ const Dashboard = () => {
               <span className="text-xs mt-1">History</span>
             </Button>
             
-            <Button variant="ghost" className="h-12 flex flex-col items-center justify-center text-gray-500 rounded-xl flex-1 mx-1">
+            <Button 
+              variant="ghost" 
+              className="h-12 flex flex-col items-center justify-center text-gray-500 rounded-xl flex-1 mx-1"
+              onClick={handleSettingsClick}
+            >
               <Settings size={20} />
               <span className="text-xs mt-1">Settings</span>
             </Button>
