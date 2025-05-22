@@ -169,3 +169,13 @@
 .auth-button {
   @apply transition-all duration-200 hover:shadow-md active:scale-[0.98];
 }
+
+/* Hide scrollbars but maintain functionality */
+.scrollbar-none {
+  -ms-overflow-style: none;  /* Internet Explorer and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, and Opera */
+}
