@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +16,7 @@ const Settings = () => {
   const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [receiptScanning, setReceiptScanning] = useState(true);
-  const [currency, setCurrency] = useState("₦");
+  const { currency, setCurrency } = useCurrency();
 
   const handleBack = () => {
     navigate("/dashboard");

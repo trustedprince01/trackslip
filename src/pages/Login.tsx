@@ -1,23 +1,51 @@
 
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { signIn } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const from = location.state?.from?.pathname || "/dashboard";
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log("Login attempt with:", { email, password });
-    
-    // Navigate to dashboard after login
-    navigate("/dashboard");
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const { error: signInError } = await signIn(email, password);
+      
+      if (signInError) {
+        throw signInError;
+      }
+      
+      toast.success("Successfully logged in!");
+      
+      // Use a small timeout to ensure the auth state is updated
+      setTimeout(() => {
+        navigate(from, { replace: true });
+      }, 100);
+      
+    } catch (err) {
+      console.error("Login error:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to sign in. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -31,7 +59,13 @@ const Login = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-5 pt-4">
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-md">
+                {error}
+              </div>
+            )}
+            
+            <form onSubmit={handleSubmit} className="space-y-5 pt-2">
               <div className="space-y-2">
                 <div className="relative">
                   <Input
@@ -40,6 +74,7 @@ const Login = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 h-12 text-base"
+                    disabled={isLoading}
                     required
                   />
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -54,6 +89,7 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 h-12 text-base"
+                    disabled={isLoading}
                     required
                   />
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -68,8 +104,16 @@ const Login = () => {
               <Button 
                 type="submit" 
                 className="w-full h-12 text-base font-medium bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue hover:opacity-90 transition-opacity"
+                disabled={isLoading}
               >
-                Login
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Login'
+                )}
               </Button>
 
               <div className="relative flex items-center py-2">

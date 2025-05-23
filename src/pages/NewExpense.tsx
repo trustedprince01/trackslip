@@ -1,10 +1,14 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Camera, Image, Info, Plus, FileText, Sparkles, ShieldCheck, Search, Download, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Camera, Image, Info, Plus, FileText, Sparkles, ShieldCheck, Search, Download, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDropzone } from "react-dropzone";
+import { useReceipts } from "@/hooks/useReceipts";
+import { Loader2 } from "lucide-react";
 
 type ProcessingStep = {
   id: string;
@@ -61,55 +65,191 @@ const processingSteps: ProcessingStep[] = [
 
 const NewExpense = () => {
   const navigate = useNavigate();
-  const [images, setImages] = useState<string[]>([]);
+  const { user } = useAuth();
+  const { addReceiptFromImage } = useReceipts();
+  const [images, setImages] = useState<{url: string; file: File}[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Disable buttons when processing or uploading
+  const isButtonDisabled = isProcessing || isUploading;
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const newImages = Array.from(files).map(file => URL.createObjectURL(file));
-      setImages([...images, ...newImages]);
-      toast.success(`${files.length} ${files.length === 1 ? 'image' : 'images'} added`);
+  const onDrop = (acceptedFiles: File[]) => {
+    if (!acceptedFiles.length || isButtonDisabled) return;
+    
+    try {
+      const newImages = acceptedFiles.map(file => {
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+          throw new Error(`Unsupported file type: ${file.type}. Please upload a JPG, PNG, or WEBP image.`);
+        }
+        
+        // Validate file size (5MB)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+          throw new Error(`File is too large. Maximum size is 5MB.`);
+        }
+        
+        return {
+          url: URL.createObjectURL(file),
+          file
+        };
+      });
+      
+      setImages(prev => [...prev, ...newImages]);
+      toast.success(`${newImages.length} ${newImages.length === 1 ? 'image' : 'images'} added`);
+    } catch (error) {
+      console.error('Error processing dropped files:', error);
+      toast.error(error instanceof Error ? error.message : 'Error processing files');
+    }
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp'],
+    },
+    maxFiles: 10,
+    maxSize: 5 * 1024 * 1024, // 5MB
+    noClick: isButtonDisabled,
+    noKeyboard: isButtonDisabled,
+  });
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      onDrop(files);
+      // Clear the input value to allow selecting the same file again
+      if (e.target) {
+        e.target.value = '';
+      }
     }
   };
 
   const handleCameraCapture = () => {
-    // In a real app, this would trigger the device camera
-    // For now, we'll simulate adding a sample image
-    const sampleImage = "https://placehold.co/300x500/333/white?text=Receipt+Photo";
-    setImages([...images, sampleImage]);
-    toast.success("Photo captured");
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
+  
+  const removeImage = (index: number) => {
+    // Revoke the object URL to prevent memory leaks
+    URL.revokeObjectURL(images[index].url);
+    setImages(prev => prev.filter((_, i) => i !== index));
+    
+    if (currentImageIndex >= images.length - 1 && currentImageIndex > 0) {
+      setCurrentImageIndex(prev => prev - 1);
+    }
+  }; 
+  
+  // Clean up object URLs when component unmounts
+  React.useEffect(() => {
+    return () => {
+      images.forEach(image => URL.revokeObjectURL(image.url));
+    };
+  }, [images]);
 
-  const simulateProcessing = () => {
+  const processReceipt = async () => {
+    if (!user || !images.length || isButtonDisabled) return;
+    
+    setIsUploading(true);
     setIsProcessing(true);
+    setError(null);
     setCurrentStepIndex(0);
     setProgress(0);
-
+    
     const totalSteps = processingSteps.length - 2; // Exclude complete and error states
-    let step = 0;
-
-    const processInterval = setInterval(() => {
-      if (step < totalSteps) {
-        setCurrentStepIndex(step);
-        const progressIncrement = 100 / totalSteps;
-        setProgress((step + 1) * progressIncrement);
-        step++;
-      } else {
-        clearInterval(processInterval);
-        setCurrentStepIndex(4); // Complete state
-        setProgress(100);
+    let successCount = 0;
+    
+    // Helper function to update progress with a small delay for better UX
+    const updateStepWithDelay = async (stepIndex: number, delay = 500) => {
+      setCurrentStepIndex(stepIndex);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    };
+    
+    try {
+      // Process each image
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
         
-        // After completion, redirect to dashboard with a delay
-        setTimeout(() => {
-          navigate("/dashboard");
-          toast.success("Receipt processed successfully!");
-        }, 1500);
+        try {
+          // Step 1: Validating
+          await updateStepWithDelay(0);
+          setProgress(10);
+          // Simulate validation
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          // Step 2: Extracting
+          await updateStepWithDelay(1);
+          setProgress(30);
+          // Simulate extraction
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Step 3: Analyzing
+          await updateStepWithDelay(2);
+          setProgress(60);
+          
+          // Process the receipt using our service
+          console.log('Starting to process receipt...');
+          const receipt = await addReceiptFromImage(image.file);
+          console.log('Receipt processed successfully:', receipt);
+          
+          // Step 4: Saving
+          await updateStepWithDelay(3);
+          setProgress(90);
+          // Simulate saving
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          successCount++;
+          
+          // Mark as complete for this image
+          setProgress(100);
+          
+        } catch (error) {
+          console.error(`Error processing image ${i + 1}:`, error);
+          // Show error state
+          setCurrentStepIndex(processingSteps.findIndex(step => step.id === 'error'));
+          setError(error instanceof Error ? error.message : 'Failed to process receipt');
+          // Continue with next image even if one fails
+        }
       }
-    }, 1200);
+      
+      // Mark as complete
+      if (successCount > 0) {
+        // Show success state briefly before completing
+        setCurrentStepIndex(processingSteps.findIndex(step => step.id === 'complete'));
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        toast.success(`Successfully processed ${successCount} ${successCount === 1 ? 'receipt' : 'receipts'}`);
+        // Clear the images after successful processing
+        setImages([]);
+      }
+      
+      if (successCount < images.length) {
+        toast.error(`Failed to process ${images.length - successCount} ${images.length - successCount === 1 ? 'receipt' : 'receipts'}`);
+      }
+      
+    } catch (error) {
+      console.error('Error in processReceipt:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process receipt';
+      setError(errorMessage);
+      setCurrentStepIndex(processingSteps.findIndex(step => step.id === 'error'));
+      toast.error(errorMessage);
+    } finally {
+      // Reset processing state
+      if (successCount === 0) {
+        // Only reset if no successful processing
+        setCurrentStepIndex(0);
+      }
+      setIsUploading(false);
+      setIsProcessing(false);
+    }
   };
 
   const handleGoBack = () => {
@@ -117,36 +257,102 @@ const NewExpense = () => {
   };
 
   const renderEmptyState = () => (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+    <div 
+      {...getRootProps()}
+      className={`flex flex-col items-center justify-center py-16 px-6 text-center border-2 border-dashed rounded-lg m-4 cursor-pointer transition-colors ${
+        isDragActive ? 'border-primary bg-primary/10' : 'border-gray-700 hover:border-primary/50 hover:bg-primary/5'
+      }`}
+    >
+      <input {...getInputProps()} />
       <div className="h-16 w-16 mb-6 text-gray-400">
-        <FileText size={64} />
+        {isDragActive ? <FileText size={64} /> : <FileText size={64} />}
       </div>
-      <h2 className="text-xl font-semibold text-gray-100 mb-2">Select a Receipt Image</h2>
-      <p className="text-gray-400 text-sm">
-        Take a photo of your receipt or select one from your gallery
+      <h2 className="text-xl font-semibold text-gray-100 mb-2">
+        {isDragActive ? 'Drop your receipt here' : 'Select a Receipt Image'}
+      </h2>
+      <p className="text-gray-400 text-sm mb-4">
+        Drag & drop your receipt here, or click to select
       </p>
+      <div className="flex gap-3">
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCameraCapture();
+          }}
+          disabled={isButtonDisabled}
+        >
+          <Camera className="mr-2 h-4 w-4" />
+          Take Photo
+        </Button>
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            fileInputRef.current?.click();
+          }}
+          disabled={isButtonDisabled}
+        >
+          <Image className="mr-2 h-4 w-4" />
+          Choose File
+        </Button>
+      </div>
+      <p className="text-xs text-gray-500 mt-4">
+        Supported formats: JPG, PNG, WEBP (max 5MB)
+      </p>
+      
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileInputChange}
+        onClick={(e) => {
+          // Prevent the click from bubbling up to parent elements
+          e.stopPropagation();
+        }}
+        accept="image/*"
+        multiple
+        className="hidden"
+      />
     </div>
   );
 
   const renderImageDisplay = () => (
     <div className="px-6 mb-6">
       <div className="relative rounded-xl overflow-hidden bg-gray-800 shadow-lg">
-        {images.length > 1 && (
-          <div className="absolute top-2 right-2 bg-black/60 px-2 py-1 rounded-full z-10">
-            <span className="text-white text-xs font-medium">
-              {currentImageIndex + 1}/{images.length}
-            </span>
-          </div>
-        )}
+        {/* Image counter and close button */}
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+          {images.length > 1 && (
+            <div className="bg-black/60 px-2 py-1 rounded-full">
+              <span className="text-white text-xs font-medium">
+                {currentImageIndex + 1}/{images.length}
+              </span>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/80 text-white"
+            onClick={() => removeImage(currentImageIndex)}
+            disabled={isButtonDisabled}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
         
+        {/* Image carousel */}
         <div className="overflow-x-auto flex snap-x snap-mandatory scrollbar-none">
           {images.map((image, index) => (
             <div 
               key={index} 
-              className="flex-shrink-0 w-full snap-center"
+              className="flex-shrink-0 w-full snap-center relative"
             >
               <img 
-                src={image} 
+                src={image.url} 
                 alt={`Receipt ${index + 1}`} 
                 className="w-full object-contain h-[300px]" 
               />
@@ -176,31 +382,10 @@ const NewExpense = () => {
     
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-        <div className="relative mb-8">
-          <div className="w-[180px] h-[180px] rounded-full border-4 border-gray-700 flex items-center justify-center">
-            <svg className="absolute top-0 left-0 w-full h-full">
-              <circle
-                cx="90"
-                cy="90"
-                r="86"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="4"
-                className={`text-gradient-to-r ${currentStep.color} opacity-70`}
-                strokeDasharray={2 * Math.PI * 86}
-                strokeDashoffset={(2 * Math.PI * 86) * (1 - progress / 100)}
-                transform="rotate(-90, 90, 90)"
-              />
-            </svg>
-            
-            <div className={`p-3 rounded-full bg-gradient-to-br ${currentStep.color} text-white`}>
-              {currentStep.icon}
-            </div>
-            
-            <div className="absolute w-full h-full rounded-full border-t-4 border-blue-500 animate-spin opacity-10" />
-          </div>
+        <div className={`mb-6 p-4 rounded-full bg-gradient-to-br ${currentStep.color} shadow-lg`}>
+          {currentStep.icon}
         </div>
-        
+
         <h2 className="text-xl font-bold bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue bg-clip-text text-transparent mb-2">
           {currentStep.name}
         </h2>
@@ -210,57 +395,25 @@ const NewExpense = () => {
   };
 
   const renderActionButtons = () => (
-    <div className="px-6 pb-24">
-      <div className="flex gap-3 mb-4">
-        <Button
-          className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:opacity-90"
-          onClick={handleCameraCapture}
-        >
-          <Camera className="mr-2 h-4 w-4" />
-          Camera
-        </Button>
-        
-        <Button
-          className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:opacity-90"
-          onClick={() => document.getElementById("file-upload")?.click()}
-        >
-          <Image className="mr-2 h-4 w-4" />
-          Gallery
-          <input
-            id="file-upload"
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-        </Button>
-      </div>
-      
-      <div className="flex items-center gap-2 justify-center mb-6 text-blue-400">
-        <Info size={16} />
-        <span className="text-xs text-gray-400">Take multiple photos for long receipts</span>
-      </div>
-      
-      {images.length > 0 && (
-        <Button
-          className="w-full py-6 bg-gradient-to-r from-purple-500 to-purple-700 hover:opacity-90 shadow-lg shadow-purple-900/20 transform transition-all active:scale-95"
-          onClick={simulateProcessing}
-        >
-          {images.length > 1 ? (
-            <>
-              <FileText className="mr-2 h-4 w-4" />
-              Process Receipt
-              <Sparkles className="ml-2 h-4 w-4" />
-            </>
-          ) : (
-            <>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Expense
-            </>
-          )}
-        </Button>
-      )}
+    <div className="p-4">
+      <Button 
+        className="w-full bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue hover:opacity-90 transition-opacity"
+        onClick={processReceipt}
+        disabled={isButtonDisabled || images.length === 0}
+      >
+        {isUploading || isProcessing ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            {isUploading ? 'Uploading...' : 'Processing...'}
+            <Sparkles className="ml-2 h-4 w-4" />
+          </>
+        ) : (
+          <>
+            <Plus className="mr-2 h-4 w-4" />
+            {images.length > 0 ? 'Process Receipts' : 'Add Receipts'}
+          </>
+        )}
+      </Button>
     </div>
   );
 

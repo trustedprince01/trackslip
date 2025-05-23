@@ -1,24 +1,47 @@
 
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Mail, Lock, User } from "lucide-react";
+import { Mail, Lock, User, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Signup = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { signUp } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const from = location.state?.from?.pathname || "/dashboard";
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle signup logic here
-    console.log("Signup attempt with:", { fullName, email, password });
-    
-    // Navigate to dashboard after signup
-    navigate("/dashboard");
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const { error: signUpError } = await signUp(email, password, { full_name: fullName });
+      
+      if (signUpError) {
+        throw signUpError;
+      }
+      
+      toast.success("Account created successfully! Please check your email to verify your account.");
+      navigate(from, { replace: true });
+    } catch (err) {
+      console.error("Signup error:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to create account. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -32,7 +55,13 @@ const Signup = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-5 pt-4">
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-md">
+                {error}
+              </div>
+            )}
+            
+            <form onSubmit={handleSubmit} className="space-y-5 pt-2">
               <div className="space-y-2">
                 <div className="relative">
                   <Input
@@ -41,6 +70,7 @@ const Signup = () => {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="pl-10 h-12 text-base"
+                    disabled={isLoading}
                     required
                   />
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -55,6 +85,7 @@ const Signup = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 h-12 text-base"
+                    disabled={isLoading}
                     required
                   />
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -65,10 +96,12 @@ const Signup = () => {
                 <div className="relative">
                   <Input
                     type="password"
-                    placeholder="Password"
+                    placeholder="Password (min 6 characters)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 h-12 text-base"
+                    disabled={isLoading}
+                    minLength={6}
                     required
                   />
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -78,8 +111,16 @@ const Signup = () => {
               <Button 
                 type="submit" 
                 className="w-full h-12 text-base font-medium bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue hover:opacity-90 transition-opacity"
+                disabled={isLoading}
               >
-                Sign Up
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  'Sign Up'
+                )}
               </Button>
 
               <div className="relative flex items-center py-2">

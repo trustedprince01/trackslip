@@ -1,19 +1,226 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Home, History, Settings, LogOut, Plus, Search, ArrowDown, ArrowUp } from "lucide-react";
+import { Home, History, Settings, LogOut, Plus, Search, ArrowDown, ArrowUp, Receipt, ShoppingBag, PieChart as PieChartIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SpendingChart } from "@/components/SpendingChart";
-import { CategoryBreakdown } from "@/components/CategoryBreakdown";
-import { ExpenseList } from "@/components/ExpenseList";
-import { AddExpenseForm } from "@/components/AddExpenseForm";
+import { PieChart } from "@/components/PieChart";
+import type { PieChartData } from "@/components/PieChart";
 import { InsightCard } from "@/components/InsightCard";
+import { AddExpenseForm } from "@/components/AddExpenseForm";
+import { useReceipts } from "@/hooks/useReceipts";
+import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { getCachedStoreLogo } from "@/utils/storeLogo";
 
-const Dashboard = () => {
+type Receipt = {
+  id: string;
+  store_name: string;
+  total_amount: number;
+  date: string;
+  items?: Array<{ id: string; name: string; price: number; quantity: number }>;
+};
+
+const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
+  const [storeLogos, setStoreLogos] = useState<Record<string, string>>({});
+  const { receipts, loading, error, fetchReceipts } = useReceipts();
+  const { formatCurrency } = useCurrency();
+  
+  if (error) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-trackslip-deepdark text-white">
+        <div className="text-center p-6">
+          <p className="text-red-500 mb-4">Error loading receipts. Please try again later.</p>
+          <Button onClick={() => fetchReceipts()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Calculate tax, discount, and category data
+  const { totalTax, totalDiscount, categoryData } = useMemo(() => {
+    if (!receipts.length) return { 
+      totalTax: 0, 
+      totalDiscount: 0, 
+      categoryData: [] as PieChartData[] 
+    };
+    
+    // Calculate totals
+    const { tax, discount, categoryTotals } = receipts.reduce((acc, receipt) => {
+      // Sum up tax (default to 0 if not available)
+      acc.tax += receipt.tax_amount || 0;
+      
+      // Sum up discounts (default to 0 if not available)
+      acc.discount += receipt.discount_amount || 0;
+      
+      // Calculate category totals
+      const category = receipt.category || 'Uncategorized';
+      acc.categoryTotals[category] = (acc.categoryTotals[category] || 0) + (receipt.total_amount || 0);
+      
+      return acc;
+    }, { 
+      tax: 0, 
+      discount: 0, 
+      categoryTotals: {} as Record<string, number> 
+    });
+    
+    // Convert to array and sort by amount
+    const categoryData = Object.entries(categoryTotals)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value], index) => ({
+        name,
+        value,
+        color: [
+          '#3b82f6', // blue-500
+          '#8b5cf6', // violet-500
+          '#10b981', // emerald-500
+          '#f59e0b', // amber-500
+          '#ec4899', // pink-500
+          '#6366f1', // indigo-500
+          '#14b8a6', // teal-500
+          '#f97316', // orange-500
+        ][index % 8] || '#6b7280' // gray-500 as fallback
+      }));
+      
+    return {
+      totalTax: Math.round(tax * 100) / 100, // Round to 2 decimal places
+      totalDiscount: Math.round(discount * 100) / 100,
+      categoryData
+    };
+  }, [receipts]);
+  
+  // Calculate summary stats and insights
+  const { 
+    totalSpent, 
+    receiptCount, 
+    averageSpend,
+    topCategory,
+    monthlySpending,
+    spendingTrend,
+    topStore
+  } = useMemo(() => {
+    if (!receipts.length) return { 
+      totalSpent: 0, 
+      receiptCount: 0, 
+      averageSpend: 0,
+      topCategory: null,
+      monthlySpending: {},
+      spendingTrend: 0,
+      topStore: null
+    };
+    
+    // Basic stats
+    const total = receipts.reduce((sum, receipt) => sum + (receipt.total_amount || 0), 0);
+    const count = receipts.length;
+    const average = count > 0 ? total / count : 0;
+    
+    // Calculate top category
+    const categoryTotals = receipts.reduce((acc, receipt) => {
+      const category = receipt.category || 'Uncategorized';
+      acc[category] = (acc[category] || 0) + (receipt.total_amount || 0);
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const topCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
+    const topCategory = topCategoryEntry ? {
+      name: topCategoryEntry[0],
+      amount: topCategoryEntry[1],
+      percentage: Math.round((topCategoryEntry[1] / total) * 100)
+    } : null;
+    
+    // Calculate monthly spending
+    const monthlySpending = receipts.reduce((acc, receipt) => {
+      if (!receipt.date) return acc;
+      const month = new Date(receipt.date).toLocaleString('default', { month: 'short' });
+      acc[month] = (acc[month] || 0) + (receipt.total_amount || 0);
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Calculate spending trend (comparing current month to previous month)
+    const months = Object.keys(monthlySpending).sort();
+    let trend = 0;
+    if (months.length >= 2) {
+      const currentMonth = months[months.length - 1];
+      const prevMonth = months[months.length - 2];
+      const currentTotal = monthlySpending[currentMonth];
+      const prevTotal = monthlySpending[prevMonth];
+      trend = prevTotal ? Math.round(((currentTotal - prevTotal) / prevTotal) * 100) : 0;
+    }
+    
+    // Find top store by total spent
+    const storeTotals = receipts.reduce((acc, receipt) => {
+      if (!receipt.store_name) return acc;
+      acc[receipt.store_name] = (acc[receipt.store_name] || 0) + (receipt.total_amount || 0);
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const topStoreEntry = Object.entries(storeTotals).sort((a, b) => b[1] - a[1])[0];
+    const topStore = topStoreEntry ? {
+      name: topStoreEntry[0],
+      amount: topStoreEntry[1],
+      count: receipts.filter(r => r.store_name === topStoreEntry[0]).length
+    } : null;
+    
+    return {
+      totalSpent: total,
+      receiptCount: count,
+      averageSpend: average,
+      topCategory,
+      monthlySpending,
+      spendingTrend: trend,
+      topStore
+    };
+  }, [receipts]);
+  
+  // Fetch receipts on component mount
+  useEffect(() => {
+    fetchReceipts();
+  }, [fetchReceipts]);
+  
+  // Fetch store logos when receipts change
+  useEffect(() => {
+    const fetchLogos = async () => {
+      const logos: Record<string, string> = {};
+      
+      // Get unique store names
+      const storeNames = [...new Set(receipts.map(r => r.store_name))];
+      
+      // Fetch logos for each store
+      for (const storeName of storeNames) {
+        if (storeName && !storeLogos[storeName]) {
+          const logo = await getCachedStoreLogo(storeName);
+          if (logo) {
+            logos[storeName] = logo;
+          }
+        }
+      }
+      
+      // Update state with new logos
+      if (Object.keys(logos).length > 0) {
+        setStoreLogos(prev => ({
+          ...prev,
+          ...logos
+        }));
+      }
+    };
+    
+    if (receipts.length > 0) {
+      fetchLogos();
+    }
+  }, [receipts, storeLogos]);
+  
+  // Get recent receipts (last 5)
+  const recentReceipts = useMemo(() => {
+    return [...receipts]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  }, [receipts]);
+  
+  // Format currency is now provided by the CurrencyContext
 
   const handleLogout = () => {
     navigate("/login");
@@ -45,7 +252,7 @@ const Dashboard = () => {
             <LogOut size={18} />
           </Button>
         </header>
-
+        
         {/* Main Content */}
         <div className="flex-1 px-5 pb-20 pt-2 overflow-y-auto scrollbar-none">
           {/* Search Bar */}
@@ -68,21 +275,35 @@ const Dashboard = () => {
                     <ArrowDown className="h-4 w-4 text-trackslip-blue" />
                   </div>
                 </div>
-                <p className="text-xl font-semibold bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue bg-clip-text text-transparent">₦45,000</p>
-                <p className="text-xs text-gray-500 mt-1">3 receipts</p>
+                <p className="text-xl font-semibold bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue bg-clip-text text-transparent">
+                  {loading ? (
+                    <Skeleton className="h-6 w-24 bg-gray-800" />
+                  ) : (
+                    formatCurrency(totalSpent)
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {receiptCount} receipt{receiptCount !== 1 ? 's' : ''}
+                </p>
               </CardContent>
             </Card>
             
             <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">Savings</span>
+                  <span className="text-gray-400 text-xs">Total Savings</span>
                   <div className="h-8 w-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <ArrowUp className="h-4 w-4 text-green-500" />
+                    <ArrowDown className="h-4 w-4 text-green-500" />
                   </div>
                 </div>
-                <p className="text-xl font-semibold text-green-500">₦3,890</p>
-                <p className="text-xs text-gray-500 mt-1">from receipts</p>
+                <p className="text-xl font-semibold text-green-500">
+                  {loading ? (
+                    <Skeleton className="h-6 w-20 bg-gray-800" />
+                  ) : (
+                    formatCurrency(totalDiscount)
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">from discounts</p>
               </CardContent>
             </Card>
             
@@ -94,8 +315,14 @@ const Dashboard = () => {
                     <span className="text-yellow-500 text-xs font-bold">₦</span>
                   </div>
                 </div>
-                <p className="text-xl font-semibold text-yellow-500">₦920</p>
-                <p className="text-xs text-gray-500 mt-1">last month</p>
+                <p className="text-xl font-semibold text-yellow-500">
+                  {loading ? (
+                    <Skeleton className="h-6 w-20 bg-gray-800" />
+                  ) : (
+                    formatCurrency(totalTax)
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">this month</p>
               </CardContent>
             </Card>
             
@@ -104,16 +331,22 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-gray-400 text-xs">Receipts</span>
                   <div className="h-8 w-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <span className="text-purple-500 text-xs font-bold">30</span>
+                    <Receipt className="h-4 w-4 text-purple-500" />
                   </div>
                 </div>
-                <p className="text-xl font-semibold text-purple-500">30</p>
+                <p className="text-xl font-semibold text-purple-500">
+                  {loading ? (
+                    <Skeleton className="h-6 w-6 bg-gray-800" />
+                  ) : (
+                    receiptCount
+                  )}
+                </p>
                 <p className="text-xs text-gray-500 mt-1">this month</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Monthly Spending Chart */}
+          {/* Monthly Spending */}
           <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg mb-6">
             <CardContent className="p-4">
               <div className="flex justify-between items-center mb-4">
@@ -123,7 +356,18 @@ const Dashboard = () => {
                 </Button>
               </div>
               <div className="h-48">
-                <SpendingChart />
+                {loading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : receipts.length > 0 ? (
+                  <SpendingChart receipts={receipts} />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                    <ShoppingBag className="h-8 w-8 mb-2" />
+                    <p className="text-sm">No receipt data available</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -132,13 +376,24 @@ const Dashboard = () => {
           <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg mb-6">
             <CardContent className="p-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-medium text-gray-300">Spending Breakdown</h3>
-                <Button variant="ghost" size="sm" className="h-6 text-xs text-gray-400 hover:text-white p-0">
-                  Details
+                <div className="flex items-center">
+                  <PieChartIcon className="h-4 w-4 mr-2 text-trackslip-blue" />
+                  <h3 className="text-sm font-medium text-gray-300">Spending by Category</h3>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 text-xs text-gray-400 hover:text-white p-0"
+                  onClick={() => navigate('/categories')}
+                >
+                  View All
                 </Button>
               </div>
-              <div className="h-48">
-                <CategoryBreakdown />
+              <div className="h-64">
+                <PieChart 
+                  data={categoryData} 
+                  loading={loading} 
+                />
               </div>
             </CardContent>
           </Card>
@@ -155,7 +410,72 @@ const Dashboard = () => {
                   View All
                 </Button>
               </div>
-              <ExpenseList />
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-16 w-full rounded-lg bg-gray-800/50" />
+                  ))}
+                </div>
+              ) : recentReceipts.length > 0 ? (
+                <div className="space-y-3">
+                  {recentReceipts.map((receipt) => (
+                    <div 
+                      key={receipt.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/receipts/${receipt.id}`)}
+                    >
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden mr-3">
+                          {storeLogos[receipt.store_name] ? (
+                            <img 
+                              src={storeLogos[receipt.store_name]} 
+                              alt={receipt.store_name}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                // If image fails to load, show fallback
+                                const target = e.target as HTMLImageElement;
+                                target.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+                                  <rect width="40" height="40" rx="20" fill="%233b82f6" />
+                                  <text x="50%" y="55%" font-family="Arial" font-size="20" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">
+                                    ${receipt.store_name ? receipt.store_name.charAt(0).toUpperCase() : 'S'}
+                                  </text>
+                                </svg>`;
+                              }}
+                            />
+                          ) : (
+                            <Receipt className="h-5 w-5 text-trackslip-blue" />
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-sm">{receipt.store_name || 'Unknown Store'}</h4>
+                          <p className="text-xs text-gray-400">
+                            {format(new Date(receipt.date), 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-sm">{formatCurrency(receipt.total_amount || 0)}</p>
+                        <p className="text-xs text-gray-400">
+                          {receipt.items?.length || 0} item{receipt.items?.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <ShoppingBag className="h-8 w-8 mx-auto text-gray-500 mb-2" />
+                  <p className="text-gray-400 text-sm">No receipts yet</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => navigate('/new-expense')}
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Add Receipt
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

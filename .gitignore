@@ -34,4 +34,6 @@ dist-ssr/
 *.sw?
 
 # Project configuration
-vite.config.ts
+
+# Supabase local development
+/supabase
