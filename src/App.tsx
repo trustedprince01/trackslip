@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import NewExpense from "./pages/NewExpense";
 import Settings from "./pages/Settings";
+import History from "./pages/History";
 
 // Lazy load the receipt pages for better performance
 const Receipts = lazy(() => import("./pages/Receipts"));
@@ -76,6 +77,11 @@ const App = () => (
               <Route path="/new-expense" element={
                 <ProtectedRoute>
                   <NewExpense />
+                </ProtectedRoute>
+              } />
+              <Route path="/history" element={
+                <ProtectedRoute>
+                  <History />
                 </ProtectedRoute>
               } />
               <Route path="/receipts" element={

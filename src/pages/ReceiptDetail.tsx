@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, Download, Trash2, Edit, Share2, Printer } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Download, Trash2, Share2, Printer, Calendar, MapPin, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import { useReceipts } from "@/hooks/useReceipts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -57,11 +58,11 @@ const ReceiptDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full flex justify-center bg-trackslip-deepdark text-white">
+      <div className="min-h-screen w-full flex justify-center bg-trackslip-deepdark">
         <div className="w-full max-w-[430px] p-4 space-y-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <Skeleton className="h-6 w-48 mb-6" />
-          <Skeleton className="h-80 w-full rounded-lg" />
+          <Skeleton className="h-12 w-12 rounded-full bg-gray-800" />
+          <Skeleton className="h-6 w-48 mb-6 bg-gray-800" />
+          <Skeleton className="h-80 w-full rounded-lg bg-gray-800" />
         </div>
       </div>
     );
@@ -69,136 +70,177 @@ const ReceiptDetail = () => {
 
   if (!receipt) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-trackslip-deepdark text-white">
+      <div className="min-h-screen flex items-center justify-center bg-trackslip-deepdark">
         <div className="text-center p-6 max-w-md">
-          <h2 className="text-2xl font-bold mb-4">Receipt Not Found</h2>
+          <Receipt className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-4 text-white">Receipt Not Found</h2>
           <p className="text-gray-400 mb-6">The requested receipt could not be found.</p>
-          <Button onClick={() => navigate('/receipts')}>Back to Receipts</Button>
+          <Button onClick={() => navigate('/receipts')} className="bg-trackslip-blue hover:bg-trackslip-blue/90">
+            Back to Receipts
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full flex justify-center bg-trackslip-deepdark text-white">
+    <div className="min-h-screen w-full flex justify-center bg-trackslip-deepdark">
       <div className="w-full max-w-[430px] flex flex-col h-screen relative">
         {/* Header */}
-        <header className="p-4 border-b border-trackslip-border flex items-center justify-between">
+        <header className="p-4 border-b border-gray-800 flex items-center justify-between bg-trackslip-deepdark">
           <Button 
             variant="ghost" 
             size="icon"
             onClick={() => navigate(-1)}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-400 hover:text-white hover:bg-gray-800"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold">Receipt Details</h1>
-          <div className="w-10"></div> {/* For balance */}
+          <h1 className="text-xl font-semibold text-white">Receipt Details</h1>
+          <div className="w-10"></div>
         </header>
 
         {/* Receipt Content */}
-        <div className="flex-1 px-4 py-6 overflow-y-auto">
-          <Card className="bg-trackslip-dark border-trackslip-border">
+        <div className="flex-1 px-4 py-6 overflow-y-auto scrollbar-none">
+          {/* Store Header Card */}
+          <Card className="bg-gray-900 border-gray-800 mb-6">
             <CardHeader className="pb-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-2xl">{receipt.store_name || 'Unknown Store'}</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    {format(new Date(receipt.date), 'MMMM d, yyyy • h:mm a')}
-                  </CardDescription>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(receipt.total_amount || 0)}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="h-16 w-16 bg-gradient-to-br from-trackslip-blue to-trackslip-lightBlue rounded-xl flex items-center justify-center">
+                    <Receipt className="h-8 w-8 text-white" />
                   </div>
-                  <div className="text-sm text-gray-400">
-                    {receipt.payment_method || 'Payment method not specified'}
+                  <div>
+                    <CardTitle className="text-xl text-white">{receipt.store_name || 'Unknown Store'}</CardTitle>
+                    <div className="flex items-center text-gray-400 text-sm mt-1">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      {format(new Date(receipt.date), 'MMM d, yyyy • h:mm a')}
+                    </div>
                   </div>
                 </div>
               </div>
             </CardHeader>
+          </Card>
 
-            <CardContent className="pt-0">
-              {/* Receipt Items */}
-              <div className="border-t border-trackslip-border pt-4">
-                <h3 className="font-medium mb-3">Items</h3>
-                <div className="space-y-3">
-                  {receipt.items?.length > 0 ? (
-                    receipt.items.map((item: any, index: number) => (
-                      <div key={index} className="flex justify-between">
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          {item.quantity > 1 && (
-                            <p className="text-sm text-gray-400">
-                              {item.quantity} × {formatCurrency(item.price || 0)}
-                            </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p>{formatCurrency((item.price || 0) * (item.quantity || 1))}</p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-400 text-sm">No items found</p>
+          {/* Amount Summary Card */}
+          <Card className="bg-gray-900 border-gray-800 mb-6">
+            <CardContent className="p-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-white mb-2">
+                  {formatCurrency(receipt.total_amount || 0)}
+                </div>
+                <div className="text-gray-400 text-sm">
+                  {receipt.payment_method || 'Payment method not specified'}
+                </div>
+                
+                {/* Breakdown */}
+                <div className="mt-4 space-y-2">
+                  {receipt.subtotal && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Subtotal</span>
+                      <span className="text-white">{formatCurrency(receipt.subtotal)}</span>
+                    </div>
+                  )}
+                  {receipt.tax_amount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Tax</span>
+                      <span className="text-white">{formatCurrency(receipt.tax_amount)}</span>
+                    </div>
+                  )}
+                  {receipt.discount_amount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-green-400">Discount</span>
+                      <span className="text-green-400">-{formatCurrency(receipt.discount_amount)}</span>
+                    </div>
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Receipt Image */}
-              {receipt.image_url && (
-                <div className="mt-6">
-                  <h3 className="font-medium mb-3">Receipt Image</h3>
-                  <div className="rounded-lg overflow-hidden border border-trackslip-border">
-                    <img 
-                      src={receipt.image_url} 
-                      alt="Receipt" 
-                      className="w-full h-auto"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Additional Details */}
-              <div className="mt-6 space-y-2 text-sm">
-                {receipt.tax_amount > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Tax</span>
-                    <span>{formatCurrency(receipt.tax_amount)}</span>
-                  </div>
-                )}
-                {receipt.tip_amount > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Tip</span>
-                    <span>{formatCurrency(receipt.tip_amount)}</span>
+          {/* Items Card */}
+          <Card className="bg-gray-900 border-gray-800 mb-6">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center justify-between">
+                Items
+                <span className="text-sm text-gray-400 font-normal">
+                  {receipt.items?.length || 0} items
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-3">
+                {receipt.items?.length > 0 ? (
+                  receipt.items.map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+                      <div className="flex-1">
+                        <p className="font-medium text-white">{item.name}</p>
+                        {item.quantity > 1 && (
+                          <p className="text-sm text-gray-400">
+                            Qty: {item.quantity} × {formatCurrency(item.price || 0)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-white">
+                          {formatCurrency((item.price || 0) * (item.quantity || 1))}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Receipt className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-400">No items found</p>
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
 
+          {/* Receipt Image */}
+          {receipt.image_url && (
+            <Card className="bg-gray-900 border-gray-800 mb-6">
+              <CardHeader>
+                <CardTitle className="text-white">Receipt Image</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-lg overflow-hidden border border-gray-700">
+                  <img 
+                    src={receipt.image_url} 
+                    alt="Receipt" 
+                    className="w-full h-auto"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Action Buttons */}
-          <div className="mt-6 grid grid-cols-4 gap-3">
-            <Button variant="outline" className="flex flex-col h-auto py-3">
-              <Download className="h-5 w-5 mb-1" />
-              <span className="text-xs">PDF</span>
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <Button variant="outline" className="flex items-center justify-center h-12 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700">
+              <Download className="h-4 w-4 mr-2" />
+              Download
             </Button>
-            <Button variant="outline" className="flex flex-col h-auto py-3">
-              <Share2 className="h-5 w-5 mb-1" />
-              <span className="text-xs">Share</span>
+            <Button variant="outline" className="flex items-center justify-center h-12 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700">
+              <Share2 className="h-4 w-4 mr-2" />
+              Share
             </Button>
-            <Button variant="outline" className="flex flex-col h-auto py-3">
-              <Printer className="h-5 w-5 mb-1" />
-              <span className="text-xs">Print</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="outline" className="flex items-center justify-center h-12 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700">
+              <Printer className="h-4 w-4 mr-2" />
+              Print
             </Button>
             <Button 
               variant="outline" 
-              className="flex flex-col h-auto py-3 text-red-500 hover:text-red-400 hover:border-red-400"
+              className="flex items-center justify-center h-12 bg-red-900/20 border-red-800 text-red-400 hover:bg-red-900/30"
               onClick={handleDelete}
               disabled={deleting}
             >
-              <Trash2 className="h-5 w-5 mb-1" />
-              <span className="text-xs">Delete</span>
+              <Trash2 className="h-4 w-4 mr-2" />
+              {deleting ? 'Deleting...' : 'Delete'}
             </Button>
           </div>
         </div>

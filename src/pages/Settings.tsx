@@ -4,10 +4,8 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, Bell, Moon, Sun, User, CreditCard, Lock, HelpCircle, LogOut, Home, History, Settings as SettingsIcon } from "lucide-react";
+import { ChevronLeft, Bell, Moon, User, CreditCard, Lock, HelpCircle, LogOut, Home, History, Settings as SettingsIcon, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Settings = () => {
@@ -38,40 +36,42 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex justify-center bg-trackslip-deepdark text-white overflow-hidden">
+    <div className="min-h-screen w-full flex justify-center bg-trackslip-deepdark overflow-hidden">
       <div className="w-full max-w-[430px] flex flex-col h-screen relative">
         {/* Header Section */}
-        <header className="flex items-center p-6">
+        <header className="flex items-center p-6 border-b border-gray-800">
           <Button 
             variant="ghost" 
             size="sm" 
-            className="mr-4 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full h-9 w-9 p-0" 
+            className="mr-4 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full h-10 w-10 p-0" 
             onClick={handleBack}
           >
             <ChevronLeft size={20} />
           </Button>
-          <h1 className="text-2xl font-semibold bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue bg-clip-text text-transparent">
+          <h1 className="text-2xl font-semibold text-white">
             Settings
           </h1>
         </header>
 
         {/* Main Content */}
-        <div className="flex-1 px-5 pb-20 pt-2 overflow-y-auto scrollbar-none">
+        <div className="flex-1 px-5 pb-20 pt-6 overflow-y-auto scrollbar-none">
           {/* Profile Section */}
           <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg mb-6">
             <CardContent className="p-5">
-              <div className="flex items-center">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue flex items-center justify-center text-xl font-bold">
-                  P
-                </div>
-                <div className="ml-4">
-                  <h3 className="font-semibold text-lg">Prince</h3>
-                  <p className="text-gray-400 text-sm">prince@example.com</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue flex items-center justify-center text-xl font-bold text-white">
+                    P
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="font-semibold text-lg text-white">Prince</h3>
+                    <p className="text-gray-400 text-sm">prince@example.com</p>
+                  </div>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="ml-auto text-gray-400 hover:text-white hover:bg-gray-800 rounded-full"
+                  className="text-gray-400 hover:text-white hover:bg-gray-800 rounded-full"
                 >
                   <User size={18} />
                 </Button>
@@ -80,13 +80,13 @@ const Settings = () => {
           </Card>
 
           {/* Appearance Settings */}
-          <h2 className="text-gray-400 text-xs uppercase font-semibold mb-2 px-1">Appearance</h2>
+          <h2 className="text-gray-400 text-xs uppercase font-semibold mb-3 px-1">Appearance</h2>
           <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg mb-6">
             <CardContent className="p-0">
               <div className="flex items-center justify-between p-4 border-b border-gray-800">
                 <div className="flex items-center">
                   <Moon size={18} className="text-trackslip-blue mr-3" />
-                  <span>Dark Mode</span>
+                  <span className="text-white">Dark Mode</span>
                 </div>
                 <Switch 
                   checked={darkMode}
@@ -97,7 +97,7 @@ const Settings = () => {
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center">
                   <Bell size={18} className="text-trackslip-blue mr-3" />
-                  <span>Notifications</span>
+                  <span className="text-white">Notifications</span>
                 </div>
                 <Switch 
                   checked={notifications}
@@ -109,19 +109,19 @@ const Settings = () => {
           </Card>
 
           {/* Preferences */}
-          <h2 className="text-gray-400 text-xs uppercase font-semibold mb-2 px-1">Preferences</h2>
+          <h2 className="text-gray-400 text-xs uppercase font-semibold mb-3 px-1">Preferences</h2>
           <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg mb-6">
             <CardContent className="p-0">
               <div className="flex items-center justify-between p-4 border-b border-gray-800">
                 <div className="flex items-center">
                   <CreditCard size={18} className="text-trackslip-blue mr-3" />
-                  <span>Currency</span>
+                  <span className="text-white">Currency</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <select 
                     value={currency} 
                     onChange={(e) => setCurrency(e.target.value)}
-                    className="bg-gray-800 border border-gray-700 rounded-lg p-1 text-sm"
+                    className="bg-gray-800 border border-gray-700 rounded-lg p-2 text-sm text-white focus:ring-2 focus:ring-trackslip-blue focus:border-transparent"
                   >
                     <option value="₦">₦ (Naira)</option>
                     <option value="$">$ (USD)</option>
@@ -133,7 +133,7 @@ const Settings = () => {
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center">
                   <CreditCard size={18} className="text-trackslip-blue mr-3" />
-                  <span>Auto Scan Receipts</span>
+                  <span className="text-white">Auto Scan Receipts</span>
                 </div>
                 <Switch 
                   checked={receiptScanning}
@@ -145,25 +145,25 @@ const Settings = () => {
           </Card>
 
           {/* Security */}
-          <h2 className="text-gray-400 text-xs uppercase font-semibold mb-2 px-1">Security</h2>
+          <h2 className="text-gray-400 text-xs uppercase font-semibold mb-3 px-1">Security</h2>
           <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg mb-6">
             <CardContent className="p-0">
               <div className="p-4 border-b border-gray-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <Lock size={18} className="text-trackslip-blue mr-3" />
-                    <span>Change Password</span>
+                    <span className="text-white">Change Password</span>
                   </div>
-                  <ChevronLeft size={18} className="transform rotate-180 text-gray-400" />
+                  <ChevronRight size={18} className="text-gray-400" />
                 </div>
               </div>
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <HelpCircle size={18} className="text-trackslip-blue mr-3" />
-                    <span>Help & Support</span>
+                    <span className="text-white">Help & Support</span>
                   </div>
-                  <ChevronLeft size={18} className="transform rotate-180 text-gray-400" />
+                  <ChevronRight size={18} className="text-gray-400" />
                 </div>
               </div>
             </CardContent>
@@ -171,7 +171,7 @@ const Settings = () => {
 
           {/* Save Button */}
           <Button 
-            className="w-full bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue hover:opacity-90 mb-6"
+            className="w-full bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue hover:opacity-90 mb-4 text-white"
             onClick={handleSaveChanges}
           >
             Save Changes
@@ -179,9 +179,10 @@ const Settings = () => {
 
           {/* Logout Button */}
           <Button 
-            className="w-full bg-red-600 hover:bg-red-700 mb-6"
+            className="w-full bg-red-600 hover:bg-red-700 mb-6 text-white"
             onClick={handleLogout}
           >
+            <LogOut className="h-4 w-4 mr-2" />
             Logout
           </Button>
         </div>
@@ -201,6 +202,7 @@ const Settings = () => {
             <Button 
               variant="ghost" 
               className="h-12 flex flex-col items-center justify-center text-gray-500 rounded-xl flex-1 mx-1"
+              onClick={() => navigate('/history')}
             >
               <History size={20} />
               <span className="text-xs mt-1">History</span>
