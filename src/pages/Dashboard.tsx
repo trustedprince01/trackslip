@@ -101,7 +101,10 @@ const Dashboard: React.FC = () => {
     topCategory,
     monthlySpending,
     spendingTrend,
-    topStore
+    topStore,
+    averageDailySpend,
+    weeklySpendingTrend,
+    subscriptionCosts
   } = useMemo(() => {
     if (!receipts.length) return { 
       totalSpent: 0, 
@@ -164,6 +167,41 @@ const Dashboard: React.FC = () => {
       amount: topStoreEntry[1],
       count: receipts.filter(r => r.store_name === topStoreEntry[0]).length
     } : null;
+
+    // Calculate average daily spend
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const daysInMonth = Math.floor((today.getTime() - firstDayOfMonth.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const averageDailySpend = total / Math.max(1, daysInMonth);
+
+    // Calculate weekly spending trend
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const lastWeekSpend = receipts
+      .filter(r => new Date(r.date) < oneWeekAgo)
+      .reduce((sum, r) => sum + (r.total_amount || 0), 0);
+      
+    const thisWeekSpend = receipts
+      .filter(r => new Date(r.date) >= oneWeekAgo)
+      .reduce((sum, r) => sum + (r.total_amount || 0), 0);
+      
+    const weeklySpendingTrend = lastWeekSpend > 0 
+      ? Math.round(((thisWeekSpend - lastWeekSpend) / lastWeekSpend) * 100) 
+      : 0;
+
+    // Calculate subscription costs (assuming subscriptions have a 'subscription' category or similar)
+    const subscriptions = receipts.filter(r => 
+      (r.store_name?.toLowerCase().includes('netflix') || 
+       r.store_name?.toLowerCase().includes('spotify') ||
+       r.store_name?.toLowerCase().includes('premium') ||
+       r.category?.toLowerCase() === 'subscription')
+    );
+    
+    const subscriptionCosts = {
+      count: new Set(subscriptions.map(s => s.store_name)).size,
+      total: subscriptions.reduce((sum, s) => sum + (s.total_amount || 0), 0)
+    };
     
     return {
       totalSpent: total,
@@ -172,7 +210,10 @@ const Dashboard: React.FC = () => {
       topCategory,
       monthlySpending,
       spendingTrend: trend,
-      topStore
+      topStore,
+      averageDailySpend,
+      weeklySpendingTrend,
+      subscriptionCosts
     };
   }, [receipts]);
   
@@ -232,6 +273,10 @@ const Dashboard: React.FC = () => {
 
   const handleSettingsClick = () => {
     navigate("/settings");
+  };
+
+  const handleHistoryClick = () => {
+    navigate("/history");
   };
 
   return (
@@ -399,7 +444,16 @@ const Dashboard: React.FC = () => {
           </Card>
 
           {/* Insights Card */}
-          <InsightCard />
+          <InsightCard 
+            topCategory={topCategory}
+            topStore={topStore}
+            totalDiscount={totalDiscount}
+            spendingTrend={spendingTrend}
+            weeklySpendingTrend={weeklySpendingTrend}
+            averageDailySpend={averageDailySpend}
+            subscriptionCosts={subscriptionCosts}
+            loading={loading}
+          />
 
           {/* Recent Expenses */}
           <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg mb-6">
@@ -506,7 +560,11 @@ const Dashboard: React.FC = () => {
               <span className="text-xs mt-1">Home</span>
             </Button>
             
-            <Button variant="ghost" className="h-12 flex flex-col items-center justify-center text-gray-500 rounded-xl flex-1 mx-1">
+            <Button 
+              variant="ghost" 
+              className="h-12 flex flex-col items-center justify-center text-gray-500 hover:text-trackslip-blue rounded-xl flex-1 mx-1"
+              onClick={handleHistoryClick}
+            >
               <History size={20} />
               <span className="text-xs mt-1">History</span>
             </Button>

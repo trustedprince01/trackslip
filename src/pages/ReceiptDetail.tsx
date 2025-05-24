@@ -1,14 +1,14 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Download, Trash2, Share2, Printer, Calendar, MapPin, Receipt } from "lucide-react";
+import { ArrowLeft, Download, Trash2, Share2, Printer, Calendar, MapPin, Receipt, Store } from "lucide-react";
 import { format } from "date-fns";
 import { useReceipts } from "@/hooks/useReceipts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { getCachedStoreLogo } from "@/utils/storeLogo";
 
 const ReceiptDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +17,22 @@ const ReceiptDetail = () => {
   const [receipt, setReceipt] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [storeLogo, setStoreLogo] = useState<string | null>(null);
+  const [logoLoading, setLogoLoading] = useState(true);
+
+  const fetchStoreLogo = useCallback(async (storeName: string) => {
+    if (!storeName) return;
+    
+    try {
+      setLogoLoading(true);
+      const logo = await getCachedStoreLogo(storeName);
+      setStoreLogo(logo);
+    } catch (error) {
+      console.error('Error fetching store logo:', error);
+    } finally {
+      setLogoLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const loadReceipt = async () => {
@@ -24,6 +40,10 @@ const ReceiptDetail = () => {
         if (id) {
           const data = await getReceiptById(id);
           setReceipt(data);
+          // Fetch store logo when receipt data is loaded
+          if (data?.store_name) {
+            await fetchStoreLogo(data.store_name);
+          }
         }
       } catch (error) {
         console.error('Error loading receipt:', error);
@@ -34,7 +54,7 @@ const ReceiptDetail = () => {
     };
 
     loadReceipt();
-  }, [id, getReceiptById]);
+  }, [id, getReceiptById, fetchStoreLogo]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -107,8 +127,30 @@ const ReceiptDetail = () => {
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="h-16 w-16 bg-gradient-to-br from-trackslip-blue to-trackslip-lightBlue rounded-xl flex items-center justify-center">
-                    <Receipt className="h-8 w-8 text-white" />
+                  <div className="h-16 w-16 rounded-xl flex items-center justify-center overflow-hidden bg-white/5">
+                    {logoLoading ? (
+                      <div className="h-full w-full flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-full border-2 border-t-transparent border-trackslip-blue animate-spin"></div>
+                      </div>
+                    ) : storeLogo ? (
+                      <img 
+                        src={storeLogo} 
+                        alt={receipt.store_name || 'Store logo'}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          // Fallback to default icon if image fails to load
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : (
+                      <div className="h-16 w-16 bg-gradient-to-br from-trackslip-blue to-trackslip-lightBlue rounded-xl flex items-center justify-center">
+                        <Store className="h-8 w-8 text-white" />
+                      </div>
+                    )}
+                    <div className="h-16 w-16 bg-gradient-to-br from-trackslip-blue to-trackslip-lightBlue rounded-xl hidden items-center justify-center">
+                      <Store className="h-8 w-8 text-white" />
+                    </div>
                   </div>
                   <div>
                     <CardTitle className="text-xl text-white">{receipt.store_name || 'Unknown Store'}</CardTitle>

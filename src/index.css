@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -163,7 +162,28 @@
   @apply transition-all duration-200 hover:shadow-md active:scale-[0.98];
 }
 
-/* Hide scrollbars but maintain functionality */
+/* Scrollbar styles */
+.scrollbar-hide::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.scrollbar-hide::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.scrollbar-hide::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 3px;
+  transition: background 0.2s ease-in-out;
+}
+
+.scrollbar-hide::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+/* Hide scrollbar but keep functionality */
 .scrollbar-none {
   -ms-overflow-style: none;  /* Internet Explorer and Edge */
   scrollbar-width: none;  /* Firefox */

@@ -1,14 +1,18 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search, Filter, ArrowUpDown, Calendar, Trash2, Home, History as HistoryIcon, Settings } from "lucide-react";
+import { ArrowLeft, Search, Filter, ArrowUpDown, Calendar, Trash2, Home, History as HistoryIcon, Settings, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useReceipts } from "@/hooks/useReceipts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { getCachedStoreLogo } from "@/lib/storeLogos";
+
+interface StoreLogoCache {
+  [key: string]: string | null;
+}
 
 const History = () => {
   const navigate = useNavigate();
@@ -17,6 +21,8 @@ const History = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState("date-newest");
+  const [logoCache, setLogoCache] = useState<StoreLogoCache>({});
+  const [loadingLogos, setLoadingLogos] = useState<{[key: string]: boolean}>({});
 
   // Filter and sort receipts
   const filteredAndSortedReceipts = receipts
@@ -58,6 +64,32 @@ const History = () => {
       }
     }
   };
+
+  // Load store logos
+  useEffect(() => {
+    const loadLogos = async () => {
+      const uniqueStoreNames = Array.from(new Set(receipts.map(r => r.store_name).filter(Boolean)));
+      
+      for (const storeName of uniqueStoreNames) {
+        if (!storeName || logoCache[storeName] !== undefined) continue;
+        
+        setLoadingLogos(prev => ({ ...prev, [storeName]: true }));
+        try {
+          const logo = await getCachedStoreLogo(storeName);
+          setLogoCache(prev => ({ ...prev, [storeName]: logo }));
+        } catch (error) {
+          console.error(`Error loading logo for ${storeName}:`, error);
+          setLogoCache(prev => ({ ...prev, [storeName]: null }));
+        } finally {
+          setLoadingLogos(prev => ({ ...prev, [storeName]: false }));
+        }
+      }
+    };
+
+    if (receipts.length > 0) {
+      loadLogos();
+    }
+  }, [receipts]);
 
   const getStoreColors = (storeName: string) => {
     const colors = [
@@ -174,18 +206,46 @@ const History = () => {
                       {/* Header */}
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-3">
-                          <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${storeColors.bg} border ${storeColors.border} flex items-center justify-center`}>
-                            <span className={`text-xl font-bold ${storeColors.text}`}>
-                              {(receipt.store_name || 'U')[0].toUpperCase()}
-                            </span>
+                          <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${storeColors.bg} border ${storeColors.border} flex items-center justify-center overflow-hidden`}>
+                            {loadingLogos[receipt.store_name || ''] ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                            ) : logoCache[receipt.store_name || ''] ? (
+                              <img 
+                                src={logoCache[receipt.store_name || ''] || ''} 
+                                alt={receipt.store_name || 'Store'}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  // Fallback to initial if image fails to load
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = '';
+                                  target.className = 'hidden';
+                                  const nextSibling = target.nextElementSibling as HTMLElement;
+                                  if (nextSibling) {
+                                    nextSibling.classList.remove('hidden');
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <span className={`text-xl font-bold ${storeColors.text} ${logoCache[receipt.store_name || ''] === null ? 'hidden' : ''}`}>
+                                {(receipt.store_name || 'U')[0].toUpperCase()}
+                              </span>
+                            )}
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-white">
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-white truncate" title={receipt.store_name || 'Unknown Store'}>
                               {receipt.store_name || 'Unknown Store'}
                             </h3>
-                            <p className="text-sm text-gray-400">
-                              {receipt.items?.length ? `${receipt.items.length} items` : 'Take Out'}
-                            </p>
+                            <div className="flex items-center text-sm text-gray-400 space-x-2">
+                              <span>
+                                {receipt.items?.length ? `${receipt.items.length} ${receipt.items.length === 1 ? 'item' : 'items'}` : 'No items'}
+                              </span>
+                              {receipt.items?.length > 0 && (
+                                <span className="text-gray-600">•</span>
+                              )}
+                              <span className="whitespace-nowrap">
+                                {format(new Date(receipt.date), 'MMM d, yyyy')}
+                              </span>
+                            </div>
                           </div>
                         </div>
                         <div className="text-right">
@@ -193,12 +253,6 @@ const History = () => {
                             {formatCurrency(receipt.total_amount || 0)}
                           </div>
                         </div>
-                      </div>
-
-                      {/* Date */}
-                      <div className="flex items-center text-gray-400 text-sm mb-4">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {format(new Date(receipt.date), 'MMM d, yyyy')}
                       </div>
 
                       {/* Items Preview */}
