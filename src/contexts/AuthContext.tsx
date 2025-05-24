@@ -87,53 +87,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Update auth state and fetch profile when session changes
   useEffect(() => {
-    // Get initial session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          try {
-            const userProfile = await fetchUserProfile(session.user.id);
-            setProfile(userProfile);
-          } catch (error) {
-            console.error('Error fetching user profile:', error);
-          }
-        } else {
-          setProfile(null);
+    let mounted = true;
+    let authSubscription: { unsubscribe: () => void } | null = null;
+
+    const handleAuthChange = async (event: string, session: Session | null) => {
+      if (!mounted) return;
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        if (mounted) {
+          setProfile(profile);
         }
-        
+      } else if (mounted) {
+        setProfile(null);
+      }
+      
+      if (mounted) {
         setLoading(false);
       }
-    );
+    };
 
-    // Initialize auth state
+    // Only set up the listener once
+    if (!authSubscription) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+      authSubscription = subscription;
+    }
+
+    return () => {
+      mounted = false;
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      } 
+    };
+  }, []);
+
+  // Initialize auth state
+  useEffect(() => {
+    let isMounted = true;
+    
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
+        if (isMounted && session) {
           setSession(session);
           setUser(session.user);
           const userProfile = await fetchUserProfile(session.user.id);
-          setProfile(userProfile);
+          if (isMounted) {
+            setProfile(userProfile);
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     // Initialize auth state
     initAuth();
 
-    // Cleanup subscription on unmount
+    // Cleanup on unmount
     return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
+      isMounted = false;
     };
   }, [fetchUserProfile]);
 

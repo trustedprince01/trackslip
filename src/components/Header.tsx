@@ -1,47 +1,58 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
-  const [scrolled, setScrolled] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
-  
+  const { user, signOut } = useAuth();
+
   useEffect(() => {
     const handleScroll = () => {
-      const isScrolled = window.scrollY > 10;
-      if (isScrolled !== scrolled) {
-        setScrolled(isScrolled);
-      }
+      setIsScrolled(window.scrollY > 10);
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [scrolled]);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleLogoClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Sign out and navigate to home page
+    await signOut();
+    navigate('/');
+  };
+
+  const isActive = (path: string) => {
+    return location.pathname === path ? 'text-trackslip-blue' : 'text-gray-700 dark:text-gray-300';
+  };
 
   return (
-    <header className={cn(
-      "fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-4",
-      scrolled ? "bg-black/90 backdrop-blur-lg shadow-lg" : "bg-transparent"
-    )}>
-      <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
-        <div className="flex items-center">
-          <a href="#" className="text-white font-radio text-xl">
-            Track<span className="text-trackslip-teal">Slip</span>
-          </a>
-        </div>
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      isScrolled ? 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm' : 'bg-transparent'
+    }`}>
+      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <Link 
+          to={user ? '/dashboard' : '/'} 
+          onClick={handleLogoClick}
+          className="flex items-center space-x-2"
+        >
+          <span className="text-2xl font-bold bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue bg-clip-text text-transparent">
+            TrackSlip
+          </span>
+        </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuLink href="#" className="text-sm font-radio text-white/90 hover:text-white transition-colors">
+                <NavigationMenuLink href="#" className={`text-sm font-radio text-white/90 hover:text-white transition-colors ${isActive('/')}`}>
                   Home
                 </NavigationMenuLink>
               </NavigationMenuItem>

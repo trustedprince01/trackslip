@@ -116,12 +116,32 @@ const Settings = () => {
     navigate("/dashboard");
   };
 
-  const handleLogout = () => {
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of your account",
-    });
-    navigate("/login");
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await signOut();
+      if (error) throw error;
+      
+      // Clear any local storage/session storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Redirect to login page and prevent going back
+      navigate("/login", { replace: true });
+      
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account",
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSaveChanges = () => {
