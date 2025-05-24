@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Download, Trash2, Share2, Printer, Calendar, MapPin, Receipt, Store } from "lucide-react";
+import { ArrowLeft, Download, Trash2, Share2, Printer, Calendar, Receipt, Store, TrendingUp, Sparkles, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useReceipts } from "@/hooks/useReceipts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,7 +41,6 @@ const ReceiptDetail = () => {
         if (id) {
           const data = await getReceiptById(id);
           setReceipt(data);
-          // Fetch store logo when receipt data is loaded
           if (data?.store_name) {
             await fetchStoreLogo(data.store_name);
           }
@@ -64,7 +64,7 @@ const ReceiptDetail = () => {
         setDeleting(true);
         await deleteReceipt(id);
         toast.success('Receipt deleted successfully');
-        navigate('/receipts');
+        navigate('/history');
       } catch (error) {
         console.error('Error deleting receipt:', error);
         toast.error('Failed to delete receipt');
@@ -78,11 +78,15 @@ const ReceiptDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full flex justify-center bg-trackslip-deepdark">
-        <div className="w-full max-w-[430px] p-4 space-y-4">
-          <Skeleton className="h-12 w-12 rounded-full bg-gray-800" />
-          <Skeleton className="h-6 w-48 mb-6 bg-gray-800" />
-          <Skeleton className="h-80 w-full rounded-lg bg-gray-800" />
+      <div className="min-h-screen w-full flex justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black">
+        <div className="w-full max-w-[430px] p-4 space-y-6">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-6 w-48" />
+            <div className="w-8" />
+          </div>
+          <Skeleton className="h-80 w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
         </div>
       </div>
     );
@@ -90,73 +94,91 @@ const ReceiptDetail = () => {
 
   if (!receipt) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-trackslip-deepdark">
-        <div className="text-center p-6 max-w-md">
-          <Receipt className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-4 text-white">Receipt Not Found</h2>
-          <p className="text-gray-400 mb-6">The requested receipt could not be found.</p>
-          <Button onClick={() => navigate('/receipts')} className="bg-trackslip-blue hover:bg-trackslip-blue/90">
-            Back to Receipts
-          </Button>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black">
+        <div className="text-center p-8 max-w-md">
+          <div className="bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm rounded-3xl p-8 border border-gray-200/30 dark:border-gray-700/30">
+            <Receipt className="h-16 w-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Receipt Not Found</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">The requested receipt could not be found.</p>
+            <Button 
+              onClick={() => navigate('/history')} 
+              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+            >
+              Back to History
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full flex justify-center bg-trackslip-deepdark">
+    <div className="min-h-screen w-full flex justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black">
       <div className="w-full max-w-[430px] flex flex-col h-screen relative">
         {/* Header */}
-        <header className="p-4 border-b border-gray-800 flex items-center justify-between bg-trackslip-deepdark">
+        <header className="p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-800/20 flex items-center justify-between">
           <Button 
             variant="ghost" 
             size="icon"
             onClick={() => navigate(-1)}
-            className="text-gray-400 hover:text-white hover:bg-gray-800"
+            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold text-white">Receipt Details</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Receipt Details</h1>
           <div className="w-10"></div>
         </header>
 
         {/* Receipt Content */}
-        <div className="flex-1 px-4 py-6 overflow-y-auto scrollbar-none">
+        <div className="flex-1 px-4 py-6 overflow-y-auto scrollbar-none space-y-6">
           {/* Store Header Card */}
-          <Card className="bg-gray-900 border-gray-800 mb-6">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
+          <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-2xl shadow-lg overflow-hidden">
+            <CardHeader className="pb-4 relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-600/10 dark:from-blue-500/5 dark:to-purple-600/5"></div>
+              <div className="relative flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="h-16 w-16 rounded-xl flex items-center justify-center overflow-hidden bg-white/5">
-                    {logoLoading ? (
-                      <div className="h-full w-full flex items-center justify-center">
-                        <div className="h-8 w-8 rounded-full border-2 border-t-transparent border-trackslip-blue animate-spin"></div>
+                  <div className="relative">
+                    <div className="h-20 w-20 rounded-2xl bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border border-white/30 dark:border-gray-700/30 flex items-center justify-center overflow-hidden shadow-lg">
+                      {logoLoading ? (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <div className="h-8 w-8 rounded-full border-2 border-t-transparent border-blue-500 animate-spin"></div>
+                        </div>
+                      ) : storeLogo ? (
+                        <img 
+                          src={storeLogo} 
+                          alt={receipt.store_name || 'Store logo'}
+                          className="h-full w-full object-cover rounded-2xl"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const nextSibling = target.nextElementSibling as HTMLElement;
+                            if (nextSibling) {
+                              nextSibling.classList.remove('hidden');
+                            }
+                          }}
+                        />
+                      ) : (
+                        <Store className="h-10 w-10 text-gray-600 dark:text-gray-400" />
+                      )}
+                      <div className="h-20 w-20 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border border-white/30 dark:border-gray-700/30 rounded-2xl hidden items-center justify-center">
+                        <Store className="h-10 w-10 text-gray-600 dark:text-gray-400" />
                       </div>
-                    ) : storeLogo ? (
-                      <img 
-                        src={storeLogo} 
-                        alt={receipt.store_name || 'Store logo'}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          // Fallback to default icon if image fails to load
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                    ) : (
-                      <div className="h-16 w-16 bg-gradient-to-br from-trackslip-blue to-trackslip-lightBlue rounded-xl flex items-center justify-center">
-                        <Store className="h-8 w-8 text-white" />
-                      </div>
-                    )}
-                    <div className="h-16 w-16 bg-gradient-to-br from-trackslip-blue to-trackslip-lightBlue rounded-xl hidden items-center justify-center">
-                      <Store className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 bg-green-500 rounded-full p-1.5 shadow-lg">
+                      <Sparkles className="h-3 w-3 text-white" />
                     </div>
                   </div>
                   <div>
-                    <CardTitle className="text-xl text-white">{receipt.store_name || 'Unknown Store'}</CardTitle>
-                    <div className="flex items-center text-gray-400 text-sm mt-1">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {format(new Date(receipt.date), 'MMM d, yyyy • h:mm a')}
+                    <CardTitle className="text-2xl text-gray-900 dark:text-white font-bold">
+                      {receipt.store_name || 'Unknown Store'}
+                    </CardTitle>
+                    <div className="flex items-center text-gray-600 dark:text-gray-400 text-sm mt-2 space-x-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>{format(new Date(receipt.date), 'MMM d, yyyy • h:mm a')}</span>
+                    </div>
+                    <div className="flex items-center text-green-600 dark:text-green-400 text-xs mt-1 space-x-1">
+                      <TrendingUp className="h-3 w-3" />
+                      <span>Verified & Processed</span>
                     </div>
                   </div>
                 </div>
@@ -165,34 +187,34 @@ const ReceiptDetail = () => {
           </Card>
 
           {/* Amount Summary Card */}
-          <Card className="bg-gray-900 border-gray-800 mb-6">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-br from-blue-500/10 to-purple-600/10 dark:from-blue-500/5 dark:to-purple-600/5 backdrop-blur-sm border border-blue-200/30 dark:border-blue-800/30 rounded-2xl shadow-lg">
+            <CardContent className="p-8">
               <div className="text-center">
-                <div className="text-3xl font-bold text-white mb-2">
+                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
                   {formatCurrency(receipt.total_amount || 0)}
                 </div>
-                <div className="text-gray-400 text-sm">
+                <div className="text-gray-600 dark:text-gray-400 text-sm mb-6">
                   {receipt.payment_method || 'Payment method not specified'}
                 </div>
                 
                 {/* Breakdown */}
-                <div className="mt-4 space-y-2">
+                <div className="space-y-3">
                   {receipt.subtotal && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Subtotal</span>
-                      <span className="text-white">{formatCurrency(receipt.subtotal)}</span>
+                    <div className="flex justify-between items-center py-2 px-4 bg-white/30 dark:bg-gray-800/30 rounded-xl backdrop-blur-sm">
+                      <span className="text-gray-700 dark:text-gray-300">Subtotal</span>
+                      <span className="text-gray-900 dark:text-white font-semibold">{formatCurrency(receipt.subtotal)}</span>
                     </div>
                   )}
                   {receipt.tax_amount > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Tax</span>
-                      <span className="text-white">{formatCurrency(receipt.tax_amount)}</span>
+                    <div className="flex justify-between items-center py-2 px-4 bg-orange-100/30 dark:bg-orange-800/20 rounded-xl backdrop-blur-sm">
+                      <span className="text-orange-700 dark:text-orange-400">Tax</span>
+                      <span className="text-orange-900 dark:text-orange-300 font-semibold">{formatCurrency(receipt.tax_amount)}</span>
                     </div>
                   )}
                   {receipt.discount_amount > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-green-400">Discount</span>
-                      <span className="text-green-400">-{formatCurrency(receipt.discount_amount)}</span>
+                    <div className="flex justify-between items-center py-2 px-4 bg-green-100/30 dark:bg-green-800/20 rounded-xl backdrop-blur-sm">
+                      <span className="text-green-700 dark:text-green-400">Discount</span>
+                      <span className="text-green-900 dark:text-green-300 font-semibold">-{formatCurrency(receipt.discount_amount)}</span>
                     </div>
                   )}
                 </div>
@@ -201,11 +223,14 @@ const ReceiptDetail = () => {
           </Card>
 
           {/* Items Card */}
-          <Card className="bg-gray-900 border-gray-800 mb-6">
+          <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-2xl shadow-lg">
             <CardHeader>
-              <CardTitle className="text-white flex items-center justify-between">
-                Items
-                <span className="text-sm text-gray-400 font-normal">
+              <CardTitle className="text-gray-900 dark:text-white flex items-center justify-between">
+                <div className="flex items-center">
+                  <Receipt className="h-5 w-5 mr-2 text-blue-500" />
+                  Items
+                </div>
+                <span className="text-sm text-gray-600 dark:text-gray-400 font-normal bg-gray-100/50 dark:bg-gray-700/50 px-3 py-1 rounded-full">
                   {receipt.items?.length || 0} items
                 </span>
               </CardTitle>
@@ -214,26 +239,26 @@ const ReceiptDetail = () => {
               <div className="space-y-3">
                 {receipt.items?.length > 0 ? (
                   receipt.items.map((item: any, index: number) => (
-                    <div key={index} className="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+                    <div key={index} className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50/50 to-gray-100/50 dark:from-gray-700/30 dark:to-gray-800/30 rounded-xl backdrop-blur-sm border border-gray-200/20 dark:border-gray-700/20 hover:scale-[1.02] transition-all duration-200">
                       <div className="flex-1">
-                        <p className="font-medium text-white">{item.name}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">{item.name}</p>
                         {item.quantity > 1 && (
-                          <p className="text-sm text-gray-400">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             Qty: {item.quantity} × {formatCurrency(item.price || 0)}
                           </p>
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-white">
+                        <p className="font-bold text-gray-900 dark:text-white">
                           {formatCurrency((item.price || 0) * (item.quantity || 1))}
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8">
-                    <Receipt className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-400">No items found</p>
+                  <div className="text-center py-12">
+                    <Receipt className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-600 dark:text-gray-400">No items found</p>
                   </div>
                 )}
               </div>
@@ -242,12 +267,15 @@ const ReceiptDetail = () => {
 
           {/* Receipt Image */}
           {receipt.image_url && (
-            <Card className="bg-gray-900 border-gray-800 mb-6">
+            <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-2xl shadow-lg overflow-hidden">
               <CardHeader>
-                <CardTitle className="text-white">Receipt Image</CardTitle>
+                <CardTitle className="text-gray-900 dark:text-white flex items-center">
+                  <Eye className="h-5 w-5 mr-2 text-green-500" />
+                  Receipt Image
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="rounded-lg overflow-hidden border border-gray-700">
+                <div className="rounded-xl overflow-hidden border border-gray-200/30 dark:border-gray-700/30 shadow-lg">
                   <img 
                     src={receipt.image_url} 
                     alt="Receipt" 
@@ -259,25 +287,34 @@ const ReceiptDetail = () => {
           )}
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <Button variant="outline" className="flex items-center justify-center h-12 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700">
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <Button 
+              variant="outline" 
+              className="flex items-center justify-center h-14 bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl font-medium"
+            >
               <Download className="h-4 w-4 mr-2" />
               Download
             </Button>
-            <Button variant="outline" className="flex items-center justify-center h-12 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700">
+            <Button 
+              variant="outline" 
+              className="flex items-center justify-center h-14 bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl font-medium"
+            >
               <Share2 className="h-4 w-4 mr-2" />
               Share
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="flex items-center justify-center h-12 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700">
+          <div className="grid grid-cols-2 gap-4">
+            <Button 
+              variant="outline" 
+              className="flex items-center justify-center h-14 bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl font-medium"
+            >
               <Printer className="h-4 w-4 mr-2" />
               Print
             </Button>
             <Button 
               variant="outline" 
-              className="flex items-center justify-center h-12 bg-red-900/20 border-red-800 text-red-400 hover:bg-red-900/30"
+              className="flex items-center justify-center h-14 bg-red-50/60 dark:bg-red-900/20 backdrop-blur-sm border-red-200/50 dark:border-red-800/50 text-red-600 dark:text-red-400 hover:bg-red-100/60 dark:hover:bg-red-900/30 rounded-xl font-medium"
               onClick={handleDelete}
               disabled={deleting}
             >

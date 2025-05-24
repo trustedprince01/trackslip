@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Home, History, Settings, LogOut, Plus, Search, ArrowDown, ArrowUp, Receipt, ShoppingBag, PieChart as PieChartIcon } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Home, History, Settings, Plus, Search, ArrowDown, Receipt, ShoppingBag, PieChart as PieChartIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SpendingChart } from "@/components/SpendingChart";
 import { PieChart } from "@/components/PieChart";
@@ -32,7 +33,7 @@ const Dashboard: React.FC = () => {
   
   if (error) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-trackslip-deepdark text-white">
+      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black text-gray-900 dark:text-white">
         <div className="text-center p-6">
           <p className="text-red-500 mb-4">Error loading receipts. Please try again later.</p>
           <Button onClick={() => fetchReceipts()}>Retry</Button>
@@ -260,12 +261,6 @@ const Dashboard: React.FC = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
   }, [receipts]);
-  
-  // Format currency is now provided by the CurrencyContext
-
-  const handleLogout = () => {
-    navigate("/login");
-  };
 
   const handleAddExpense = () => {
     navigate("/new-expense");
@@ -280,123 +275,121 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex justify-center bg-trackslip-deepdark text-white overflow-hidden">
+    <div className="min-h-screen w-full flex justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black text-gray-900 dark:text-white overflow-hidden transition-colors duration-300">
       <div className="w-full max-w-[430px] flex flex-col h-screen relative">
         {/* Header Section */}
-        <header className="flex justify-between items-center p-6">
+        <header className="flex justify-between items-center p-6 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-800/20">
           <div>
-            <h1 className="text-2xl font-semibold bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue bg-clip-text text-transparent">SpendSmart</h1>
-            <p className="text-gray-400 text-sm">Welcome back, Prince 👋</p>
+            <h1 className="text-2xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">SpendSmart</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Welcome back, Prince 👋</p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-gray-400 hover:text-white hover:bg-gray-800 rounded-full h-9 w-9 p-0" 
-            onClick={handleLogout}
-          >
-            <LogOut size={18} />
-          </Button>
+          <Avatar className="h-12 w-12 ring-2 ring-blue-500/20 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900">
+            <AvatarImage src="/lovable-uploads/7a47f95e-8b53-4dfa-9558-06ce420c91ea.png" alt="Prince" />
+            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
+              P
+            </AvatarFallback>
+          </Avatar>
         </header>
         
         {/* Main Content */}
         <div className="flex-1 px-5 pb-20 pt-2 overflow-y-auto scrollbar-none">
           {/* Search Bar */}
           <div className="relative mb-6">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+            <Search className="absolute left-4 top-3.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
             <input
               type="text"
               placeholder="Search store, item, amount..."
-              className="w-full bg-gray-900 border border-gray-800 rounded-xl py-2 pl-10 pr-4 text-sm text-gray-300 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-trackslip-blue"
+              className="w-full bg-white/80 dark:bg-gray-800/50 border border-gray-200/50 dark:border-gray-700/50 rounded-xl py-3 pl-12 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 backdrop-blur-sm"
             />
           </div>
 
           {/* Summary Cards */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg">
+            <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-xl shadow-lg">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">Actual Spent</span>
+                  <span className="text-gray-600 dark:text-gray-400 text-xs">Actual Spent</span>
                   <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <ArrowDown className="h-4 w-4 text-trackslip-blue" />
+                    <ArrowDown className="h-4 w-4 text-blue-500" />
                   </div>
                 </div>
-                <p className="text-xl font-semibold bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue bg-clip-text text-transparent">
+                <p className="text-xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
                   {loading ? (
-                    <Skeleton className="h-6 w-24 bg-gray-800" />
+                    <Skeleton className="h-6 w-24 bg-gray-200 dark:bg-gray-700" />
                   ) : (
                     formatCurrency(totalSpent)
                   )}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {receiptCount} receipt{receiptCount !== 1 ? 's' : ''}
                 </p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg">
+            <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-xl shadow-lg">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">Total Savings</span>
+                  <span className="text-gray-600 dark:text-gray-400 text-xs">Total Savings</span>
                   <div className="h-8 w-8 rounded-full bg-green-500/20 flex items-center justify-center">
                     <ArrowDown className="h-4 w-4 text-green-500" />
                   </div>
                 </div>
                 <p className="text-xl font-semibold text-green-500">
                   {loading ? (
-                    <Skeleton className="h-6 w-20 bg-gray-800" />
+                    <Skeleton className="h-6 w-20 bg-gray-200 dark:bg-gray-700" />
                   ) : (
                     formatCurrency(totalDiscount)
                   )}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">from discounts</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">from discounts</p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg">
+            <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-xl shadow-lg">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">Tax Paid</span>
+                  <span className="text-gray-600 dark:text-gray-400 text-xs">Tax Paid</span>
                   <div className="h-8 w-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
                     <span className="text-yellow-500 text-xs font-bold">₦</span>
                   </div>
                 </div>
                 <p className="text-xl font-semibold text-yellow-500">
                   {loading ? (
-                    <Skeleton className="h-6 w-20 bg-gray-800" />
+                    <Skeleton className="h-6 w-20 bg-gray-200 dark:bg-gray-700" />
                   ) : (
                     formatCurrency(totalTax)
                   )}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">this month</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">this month</p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg">
+            <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-xl shadow-lg">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">Receipts</span>
+                  <span className="text-gray-600 dark:text-gray-400 text-xs">Receipts</span>
                   <div className="h-8 w-8 rounded-full bg-purple-500/20 flex items-center justify-center">
                     <Receipt className="h-4 w-4 text-purple-500" />
                   </div>
                 </div>
                 <p className="text-xl font-semibold text-purple-500">
                   {loading ? (
-                    <Skeleton className="h-6 w-6 bg-gray-800" />
+                    <Skeleton className="h-6 w-6 bg-gray-200 dark:bg-gray-700" />
                   ) : (
                     receiptCount
                   )}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">this month</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">this month</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Monthly Spending */}
-          <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg mb-6">
+          <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-xl shadow-lg mb-6">
             <CardContent className="p-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-medium text-gray-300">Monthly Spending</h3>
-                <Button variant="ghost" size="sm" className="h-6 text-xs text-gray-400 hover:text-white p-0">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Monthly Spending</h3>
+                <Button variant="ghost" size="sm" className="h-6 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-0">
                   View All
                 </Button>
               </div>
@@ -408,7 +401,7 @@ const Dashboard: React.FC = () => {
                 ) : receipts.length > 0 ? (
                   <SpendingChart receipts={receipts} />
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                  <div className="h-full flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
                     <ShoppingBag className="h-8 w-8 mb-2" />
                     <p className="text-sm">No receipt data available</p>
                   </div>
@@ -418,17 +411,17 @@ const Dashboard: React.FC = () => {
           </Card>
 
           {/* Category Breakdown */}
-          <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg mb-6">
+          <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-xl shadow-lg mb-6">
             <CardContent className="p-4">
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center">
-                  <PieChartIcon className="h-4 w-4 mr-2 text-trackslip-blue" />
-                  <h3 className="text-sm font-medium text-gray-300">Spending by Category</h3>
+                  <PieChartIcon className="h-4 w-4 mr-2 text-blue-500" />
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Spending by Category</h3>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-6 text-xs text-gray-400 hover:text-white p-0"
+                  className="h-6 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-0"
                   onClick={() => navigate('/categories')}
                 >
                   View All
@@ -456,18 +449,18 @@ const Dashboard: React.FC = () => {
           />
 
           {/* Recent Expenses */}
-          <Card className="bg-gray-900 border-gray-800 rounded-xl shadow-lg mb-6">
+          <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-xl shadow-lg mb-6">
             <CardContent className="p-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-medium text-gray-300">Recent Expenses</h3>
-                <Button variant="ghost" size="sm" className="h-6 text-xs text-gray-400 hover:text-white p-0">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Recent Expenses</h3>
+                <Button variant="ghost" size="sm" className="h-6 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-0">
                   View All
                 </Button>
               </div>
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-16 w-full rounded-lg bg-gray-800/50" />
+                    <Skeleton key={i} className="h-16 w-full rounded-lg bg-gray-200/50 dark:bg-gray-700/50" />
                   ))}
                 </div>
               ) : recentReceipts.length > 0 ? (
@@ -475,11 +468,11 @@ const Dashboard: React.FC = () => {
                   {recentReceipts.map((receipt) => (
                     <div 
                       key={receipt.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 cursor-pointer transition-colors"
+                      className="flex items-center justify-between p-3 rounded-lg bg-white/30 dark:bg-gray-700/30 hover:bg-white/50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors backdrop-blur-sm border border-gray-200/20 dark:border-gray-600/20"
                       onClick={() => navigate(`/receipts/${receipt.id}`)}
                     >
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden mr-3">
+                        <div className="h-10 w-10 rounded-full bg-white/50 dark:bg-gray-600/50 flex items-center justify-center overflow-hidden mr-3 border border-gray-200/30 dark:border-gray-600/30">
                           {storeLogos[receipt.store_name] ? (
                             <img 
                               src={storeLogos[receipt.store_name]} 
@@ -497,19 +490,19 @@ const Dashboard: React.FC = () => {
                               }}
                             />
                           ) : (
-                            <Receipt className="h-5 w-5 text-trackslip-blue" />
+                            <Receipt className="h-5 w-5 text-blue-500" />
                           )}
                         </div>
                         <div>
-                          <h4 className="font-medium text-sm">{receipt.store_name || 'Unknown Store'}</h4>
-                          <p className="text-xs text-gray-400">
+                          <h4 className="font-medium text-sm text-gray-900 dark:text-white">{receipt.store_name || 'Unknown Store'}</h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
                             {format(new Date(receipt.date), 'MMM d, yyyy')}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-sm">{formatCurrency(receipt.total_amount || 0)}</p>
-                        <p className="text-xs text-gray-400">
+                        <p className="font-medium text-sm text-gray-900 dark:text-white">{formatCurrency(receipt.total_amount || 0)}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           {receipt.items?.length || 0} item{receipt.items?.length !== 1 ? 's' : ''}
                         </p>
                       </div>
@@ -518,8 +511,8 @@ const Dashboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="text-center py-6">
-                  <ShoppingBag className="h-8 w-8 mx-auto text-gray-500 mb-2" />
-                  <p className="text-gray-400 text-sm">No receipts yet</p>
+                  <ShoppingBag className="h-8 w-8 mx-auto text-gray-400 dark:text-gray-600 mb-2" />
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">No receipts yet</p>
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -536,7 +529,7 @@ const Dashboard: React.FC = () => {
 
         {/* Floating Action Button */}
         <Button 
-          className="absolute bottom-20 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-trackslip-blue to-trackslip-lightBlue hover:opacity-90 shadow-lg"
+          className="absolute bottom-20 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300"
           onClick={handleAddExpense}
         >
           <Plus className="h-6 w-6" />
@@ -544,9 +537,9 @@ const Dashboard: React.FC = () => {
 
         {/* Add Expense Modal */}
         <Dialog open={isExpenseModalOpen} onOpenChange={setIsExpenseModalOpen}>
-          <DialogContent className="bg-gray-900 border-gray-800 text-white sm:max-w-md">
+          <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-white">Add New Expense</DialogTitle>
+              <DialogTitle className="text-gray-900 dark:text-white">Add New Expense</DialogTitle>
             </DialogHeader>
             <AddExpenseForm onClose={() => setIsExpenseModalOpen(false)} />
           </DialogContent>
@@ -554,15 +547,15 @@ const Dashboard: React.FC = () => {
 
         {/* Bottom Navigation */}
         <div className="fixed bottom-0 left-0 right-0 flex justify-center">
-          <div className="w-full max-w-[430px] h-16 flex justify-around items-center bg-gray-900 border-t border-gray-800 px-6">
-            <Button variant="ghost" className="h-12 flex flex-col items-center justify-center text-trackslip-blue rounded-xl flex-1 mx-1">
+          <div className="w-full max-w-[430px] h-16 flex justify-around items-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-200/20 dark:border-gray-800/20 px-6">
+            <Button variant="ghost" className="h-12 flex flex-col items-center justify-center text-blue-500 dark:text-blue-400 rounded-xl flex-1 mx-1">
               <Home size={20} />
               <span className="text-xs mt-1">Home</span>
             </Button>
             
             <Button 
               variant="ghost" 
-              className="h-12 flex flex-col items-center justify-center text-gray-500 hover:text-trackslip-blue rounded-xl flex-1 mx-1"
+              className="h-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl flex-1 mx-1"
               onClick={handleHistoryClick}
             >
               <History size={20} />
@@ -571,7 +564,7 @@ const Dashboard: React.FC = () => {
             
             <Button 
               variant="ghost" 
-              className="h-12 flex flex-col items-center justify-center text-gray-500 rounded-xl flex-1 mx-1"
+              className="h-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl flex-1 mx-1"
               onClick={handleSettingsClick}
             >
               <Settings size={20} />
