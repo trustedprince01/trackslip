@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
@@ -7,6 +8,7 @@ import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMe
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -85,10 +87,17 @@ const Header = () => {
 
         {/* Desktop CTA Buttons */}
         <div className="hidden md:flex items-center space-x-4">
-          <Button variant="ghost" className="font-radio text-white/90 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 text-sm">
+          <Button 
+            variant="ghost" 
+            className="font-radio text-white/90 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
+            onClick={() => navigate('/login')}
+          >
             Log in
           </Button>
-          <Button className="bg-trackslip-blue hover:bg-trackslip-blue/90 font-radio text-white border border-trackslip-blue/50 text-sm px-5">
+          <Button 
+            className="bg-trackslip-blue hover:bg-trackslip-blue/90 font-radio text-white border border-trackslip-blue/50 text-sm px-5"
+            onClick={() => navigate('/signup')}
+          >
             Sign up free
           </Button>
         </div>
