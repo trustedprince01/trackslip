@@ -4,23 +4,105 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, Bell, Moon, Sun, User, CreditCard, Lock, HelpCircle, LogOut, Home, History, Settings as SettingsIcon, ChevronRight } from "lucide-react";
+import { ChevronLeft, Bell, Moon, Sun, User, CreditCard, Lock, HelpCircle, LogOut, Home, History, Settings as SettingsIcon, ChevronRight, Edit2, X, Check, Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { uploadImageToCloudinary } from "@/utils/cloudinary";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const [notifications, setNotifications] = React.useState(true);
   const [receiptScanning, setReceiptScanning] = React.useState(true);
   const { currency, setCurrency } = useCurrency();
   const { isDarkMode, toggleTheme } = useTheme();
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [editName, setEditName] = React.useState('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   
-  // Get user's initials for the avatar
-  const getUserInitials = () => {
+  // Initialize edit name when profile loads
+  React.useEffect(() => {
+    if (profile?.full_name) {
+      setEditName(profile.full_name);
+    } else if (user?.email) {
+      setEditName(user.email.split('@')[0]);
+    }
+  }, [profile, user]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      console.log('Starting file upload...');
+      
+      // Pass the old avatar URL to be deleted
+      const avatarUrl = await uploadImageToCloudinary(file, user?.user_metadata?.avatar_url);
+      console.log('Upload successful, updating profile...', { avatarUrl });
+      
+      await updateProfile({ avatar_url: avatarUrl });
+      
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully!",
+      });
+    } catch (error) {
+      console.error('Error in handleAvatarUpload:', error);
+      
+      let errorMessage = 'Failed to update profile picture';
+      if (error instanceof Error) {
+        errorMessage = error.message || errorMessage;
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      await updateProfile({ full_name: editName });
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getInitials = () => {
     if (!profile?.full_name) return user?.email?.[0]?.toUpperCase() || 'U';
     return profile.full_name
       .split(' ')
@@ -74,25 +156,80 @@ const Settings = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white shadow-lg">
-                    {getUserInitials()}
+                  <div className="relative group">
+                    <Avatar className="h-16 w-16 text-xl font-bold shadow-lg">
+                      <AvatarImage src={profile?.avatar_url} />
+                      <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600">
+                        {getInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleAvatarUpload}
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isUploading}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-1.5 rounded-full hover:bg-blue-600 transition-colors"
+                      title="Change profile picture"
+                    >
+                      {isUploading ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Upload className="h-3 w-3" />
+                      )}
+                    </button>
                   </div>
                   <div className="ml-4">
-                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
-                      {profile?.full_name || user?.email?.split('@')[0] || 'User'}
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    {isEditing ? (
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="h-8 w-48"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleSaveProfile}
+                          disabled={!editName.trim() || isUploading}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setIsEditing(false);
+                            setEditName(profile?.full_name || user?.email?.split('@')[0] || '');
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
+                          {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+                        </h3>
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          title="Edit name"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
                       {user?.email || 'No email available'}
                     </p>
                   </div>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl"
-                >
-                  <User size={18} />
-                </Button>
               </div>
             </CardContent>
           </Card>
