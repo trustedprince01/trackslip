@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { getCachedStoreLogo } from "@/utils/storeLogo";
+import { categorizeItems, getCategorySpending, Category } from "@/utils/categoryUtils";
 
 type Receipt = {
   id: string;
@@ -50,42 +51,41 @@ const Dashboard: React.FC = () => {
       categoryData: [] as PieChartData[] 
     };
     
-    // Calculate totals
-    const { tax, discount, categoryTotals } = receipts.reduce((acc, receipt) => {
-      // Sum up tax (default to 0 if not available)
-      acc.tax += receipt.tax_amount || 0;
-      
-      // Sum up discounts (default to 0 if not available)
-      acc.discount += receipt.discount_amount || 0;
-      
-      // Calculate category totals
-      const category = receipt.category || 'Uncategorized';
-      acc.categoryTotals[category] = (acc.categoryTotals[category] || 0) + (receipt.total_amount || 0);
-      
-      return acc;
-    }, { 
-      tax: 0, 
-      discount: 0, 
-      categoryTotals: {} as Record<string, number> 
-    });
+    // Extract all items from receipts
+    const allItems = receipts.flatMap(receipt => 
+      (receipt.items || []).map(item => ({
+        ...item,
+        receiptDate: receipt.date // Add receipt date for time-based analysis if needed
+      }))
+    );
+
+    // Categorize all items
+    const categorizedItems = categorizeItems(allItems);
     
-    // Convert to array and sort by amount
-    const categoryData = Object.entries(categoryTotals)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, value], index) => ({
-        name,
-        value,
-        color: [
-          '#3b82f6', // blue-500
-          '#8b5cf6', // violet-500
-          '#10b981', // emerald-500
-          '#f59e0b', // amber-500
-          '#ec4899', // pink-500
-          '#6366f1', // indigo-500
-          '#14b8a6', // teal-500
-          '#f97316', // orange-500
-        ][index % 8] || '#6b7280' // gray-500 as fallback
-      }));
+    // Get spending by category
+    const categorySpending = getCategorySpending(categorizedItems);
+    
+    // Calculate tax and discount totals
+    const { tax, discount } = receipts.reduce((acc, receipt) => {
+      acc.tax += receipt.tax_amount || 0;
+      acc.discount += receipt.discount_amount || 0;
+      return acc;
+    }, { tax: 0, discount: 0 });
+    
+    // Map to PieChartData format with consistent colors
+    const categoryData = categorySpending.map(({ category, amount }, index) => ({
+      name: category,
+      value: parseFloat(amount.toFixed(2)),
+      color: {
+        'Food': '#10b981',        // emerald-500
+        'Utilities': '#3b82f6',   // blue-500
+        'Shopping': '#8b5cf6',    // violet-500
+        'Transportation': '#f59e0b', // amber-500
+        'Entertainment': '#ec4899', // pink-500
+        'Healthcare': '#6366f1',   // indigo-500
+        'Others': '#6b7280'        // gray-500
+      }[category] || '#9ca3af'     // gray-400 as fallback
+    }));
       
     return {
       totalTax: Math.round(tax * 100) / 100, // Round to 2 decimal places

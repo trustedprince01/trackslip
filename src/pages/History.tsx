@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { useReceipts } from "@/hooks/useReceipts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { getCachedStoreLogo } from "@/lib/storeLogos";
+import { getCachedStoreLogo } from "@/utils/storeLogo";
 
 interface StoreLogoCache {
   [key: string]: string | null;
@@ -221,19 +221,24 @@ const History = () => {
                             {loadingLogos[receipt.store_name || ''] ? (
                               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                             ) : logoCache[receipt.store_name || ''] ? (
-                              <img 
-                                src={logoCache[receipt.store_name || ''] || ''} 
-                                alt={receipt.store_name || 'Store'}
-                                className="h-full w-full object-cover rounded-2xl"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  const nextSibling = target.nextElementSibling as HTMLElement;
-                                  if (nextSibling) {
-                                    nextSibling.classList.remove('hidden');
-                                  }
-                                }}
-                              />
+                              <>
+                                <img 
+                                  src={logoCache[receipt.store_name || ''] || ''} 
+                                  alt={receipt.store_name || 'Store'}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const fallback = target.nextElementSibling as HTMLElement;
+                                    if (fallback) {
+                                      fallback.classList.remove('hidden');
+                                    }
+                                  }}
+                                />
+                                <div className="hidden h-16 w-16 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border border-white/30 dark:border-gray-700/30 rounded-2xl items-center justify-center">
+                                  <Store className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+                                </div>
+                              </>
                             ) : (
                               <Store className="h-8 w-8 text-gray-600 dark:text-gray-400" />
                             )}

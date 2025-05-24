@@ -28,11 +28,14 @@ export interface ReceiptUpdate extends Partial<Omit<BaseReceipt, 'id' | 'user_id
   id: string;
 }
 
+export type Category = 'Food' | 'Utilities' | 'Shopping' | 'Transportation' | 'Entertainment' | 'Healthcare' | 'Others';
+
 export interface ReceiptItem {
   id?: string;
   name: string;
   price: number;
   quantity: number;
+  category?: Category; // Categorized item type
   // Add any other item properties you need
   [key: string]: any; // For additional dynamic properties
 }

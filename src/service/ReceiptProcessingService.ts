@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Receipt, ReceiptItem } from '@/types/receipt';
+import { Receipt, ReceiptItem, Category } from '@/types/receipt';
 import storageService from './StorageService';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -60,7 +60,8 @@ class ReceiptProcessingService {
           {
             "name": "Item name",
             "price": 0.00,
-            "quantity": 1
+            "quantity": 1,
+            "category": "Food" // Categorize each item into one of: Food, Utilities, Shopping, Transportation, Entertainment, Healthcare, or Others
           }
         ]
       }
@@ -74,6 +75,14 @@ class ReceiptProcessingService {
       - For amounts, ensure they are numbers (not strings)
       - If the receipt is not in English, translate the store and item names to English
       - If the receipt is not a valid receipt, return: {"error": "Not a valid receipt"}
+      - Categorize each item based on these guidelines:
+        * Food: Any edible items, groceries, restaurants, takeout, beverages
+        * Utilities: Electricity, water, gas, internet, phone bills
+        * Shopping: Clothing, electronics, home goods, personal items
+        * Transportation: Gas, public transport, taxis, parking, car maintenance
+        * Entertainment: Movies, games, events, subscriptions, hobbies
+        * Healthcare: Medicine, doctor visits, pharmacy purchases
+        * Others: Anything that doesn't fit the above categories
       `;
 
       console.log('Converting file to base64...');
@@ -108,7 +117,8 @@ class ReceiptProcessingService {
       try {
         // Try to parse directly first
         const jsonData = this.parseGeminiResponse(text);
-        return this.validateAndTransformReceiptData(jsonData);
+        const receipt = await this.validateAndTransformReceiptData(jsonData);
+        return receipt;
       } catch (error) {
         console.error('Error in processWithGemini:', error);
         throw new Error(`Failed to process receipt: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -134,39 +144,54 @@ class ReceiptProcessingService {
     }
   }
 
-  private validateAndTransformReceiptData(data: any): Partial<Receipt> {
+  private async validateAndTransformReceiptData(data: any): Promise<Partial<Receipt>> {
     // Basic validation
     if (data.error) {
       throw new Error(data.error);
     }
 
-    // Calculate subtotal if not provided
-    let subtotal = data.subtotal ? Number(data.subtotal) : null;
-    const taxAmount = data.taxAmount ? Number(data.taxAmount) : 0;
-    const discountAmount = data.discountAmount ? Number(data.discountAmount) : 0;
-    
-    // If subtotal is not provided, try to calculate it
-    if (subtotal === null && data.totalAmount) {
-      const total = Number(data.totalAmount);
-      subtotal = total + discountAmount - taxAmount;
-    }
+    const validCategories: Category[] = ['Food', 'Utilities', 'Shopping', 'Transportation', 'Entertainment', 'Healthcare', 'Others'];
 
     // Transform the data to match our Receipt type
-    return {
+    const receipt: Partial<Receipt> = {
       store_name: data.storeName || 'Unknown Store',
-      total_amount: data.totalAmount ? Number(data.totalAmount) : 0,
-      subtotal: subtotal || 0,
-      tax_amount: taxAmount,
-      discount_amount: discountAmount,
-      date: data.date || new Date().toISOString().split('T')[0], // Ensure it's a string in YYYY-MM-DD format
-      items: Array.isArray(data.items) 
-        ? data.items.map((item: any) => ({
-            name: item.name || 'Unknown Item',
-            price: item.price ? Number(item.price) : 0,
-            quantity: item.quantity ? Number(item.quantity) : 1,
-          }))
-        : [],
+      total_amount: data.totalAmount || 0,
+      subtotal: data.subtotal || (data.totalAmount - (data.taxAmount || 0) + (data.discountAmount || 0)),
+      tax_amount: data.taxAmount || 0,
+      discount_amount: data.discountAmount || 0,
+      date: data.date || new Date().toISOString().split('T')[0],
+      items: (data.items || []).map((item: any) => {
+        // Normalize the category
+        let category: Category = 'Others';
+        if (item.category && validCategories.includes(item.category)) {
+          category = item.category as Category;
+        } else if (item.category) {
+          // Try to match the beginning of the category name
+          const matchedCategory = validCategories.find(cat => 
+            item.category.toLowerCase().startsWith(cat.toLowerCase())
+          );
+          if (matchedCategory) {
+            category = matchedCategory;
+          }
+        }
+        
+        return {
+          name: item.name || 'Unknown Item',
+          price: item.price || 0,
+          quantity: item.quantity || 1,
+          category: category
+        };
+      }),
     };
+
+    // If no items have categories, try to categorize them based on names
+    if (receipt.items && receipt.items.every(item => !item.category)) {
+      const { categorizeItems } = await import('@/utils/categoryUtils');
+      const categorizedItems = categorizeItems(receipt.items);
+      receipt.items = categorizedItems;
+    }
+
+    return receipt;
   }
 
   private fileToBase64(file: File): Promise<string> {

@@ -8,14 +8,27 @@ import { ChevronLeft, Bell, Moon, Sun, User, CreditCard, Lock, HelpCircle, LogOu
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, profile } = useAuth();
   const [notifications, setNotifications] = React.useState(true);
   const [receiptScanning, setReceiptScanning] = React.useState(true);
   const { currency, setCurrency } = useCurrency();
   const { isDarkMode, toggleTheme } = useTheme();
+  
+  // Get user's initials for the avatar
+  const getUserInitials = () => {
+    if (!profile?.full_name) return user?.email?.[0]?.toUpperCase() || 'U';
+    return profile.full_name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   const handleBack = () => {
     navigate("/dashboard");
@@ -62,11 +75,15 @@ const Settings = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="h-16 w-16 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white shadow-lg">
-                    P
+                    {getUserInitials()}
                   </div>
                   <div className="ml-4">
-                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Prince</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">prince@example.com</p>
+                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
+                      {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                      {user?.email || 'No email available'}
+                    </p>
                   </div>
                 </div>
                 <Button 
