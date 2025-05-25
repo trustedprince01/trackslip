@@ -14,6 +14,7 @@ import { useReceipts } from "@/hooks/useReceipts";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { getCachedStoreLogo } from "@/utils/storeLogo";
 import { categorizeItems, getCategorySpending, Category } from "@/utils/categoryUtils";
 
@@ -31,6 +32,7 @@ const Dashboard: React.FC = () => {
   const [storeLogos, setStoreLogos] = useState<Record<string, string>>({});
   const { receipts, loading, error, fetchReceipts } = useReceipts();
   const { formatCurrency } = useCurrency();
+  const { user, profile } = useAuth();
   
   if (error) {
     return (
@@ -281,12 +283,17 @@ const Dashboard: React.FC = () => {
         <header className="flex justify-between items-center p-6 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-800/20">
           <div>
             <h1 className="text-2xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">SpendSmart</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Welcome back, Prince 👋</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Welcome back, {profile?.full_name || user?.email?.split('@')[0] || 'User'} 👋</p>
           </div>
-          <Avatar className="h-12 w-12 ring-2 ring-blue-500/20 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900">
-            <AvatarImage src="/lovable-uploads/7a47f95e-8b53-4dfa-9558-06ce420c91ea.png" alt="Prince" />
+          <Avatar 
+            className="h-12 w-12 ring-2 ring-blue-500/20 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900 cursor-pointer"
+            onClick={handleSettingsClick}
+          >
+            <AvatarImage src={profile?.avatar_url} alt={profile?.full_name || user?.email || 'User'} />
             <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
-              P
+              {profile?.full_name 
+                ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase()
+                : user?.email?.[0]?.toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
         </header>
