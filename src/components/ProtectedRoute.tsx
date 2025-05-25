@@ -1,27 +1,19 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect, useState } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading, initialized } = useAuth();
   const location = useLocation();
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Add a small delay to prevent flash of loading state
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialized(true);
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []);
+  console.log('ProtectedRoute:', { user, loading, initialized, path: location.pathname });
 
-  // Show loading state only after a short delay
-  if (loading || !isInitialized) {
+  // Show loading state while auth is initializing
+  if (!initialized || loading) {
+    console.log('ProtectedRoute: showing loading state');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-trackslip-blue"></div>
@@ -31,10 +23,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   // If not authenticated, redirect to login with the return location
   if (!user) {
+    console.log('ProtectedRoute: not authenticated, redirecting to login');
     // Store the attempted URL for redirecting after login
     const from = location.pathname !== '/login' ? location.pathname + location.search : '/';
     return <Navigate to="/login" state={{ from }} replace />;
   }
 
+  console.log('ProtectedRoute: rendering children');
   return <>{children}</>;
 };

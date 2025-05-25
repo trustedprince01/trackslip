@@ -22,26 +22,38 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // Component to handle auth-based redirects
 const AuthRedirect = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, initialized } = useAuth();
   const location = useLocation();
-  const [isInitialized, setIsInitialized] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsInitialized(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
+  console.log('AuthRedirect render:', { user, loading, initialized, path: location.pathname });
 
-  // If we're still loading or initializing, show loading state
-  if (loading || !isInitialized) {
+  // Show loading state only if not initialized yet
+  if (!initialized) {
+    console.log('Showing initial loading state');
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-trackslip-blue"></div>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading your session...</p>
       </div>
     );
   }
 
-  // Always show the index page at the root, regardless of auth state
+  // If we're still loading but initialized, show a minimal loader
+  if (loading) {
+    console.log('Still loading, showing minimal state');
+    return null;
+  }
+  
+  // If user is logged in and on the root path, redirect to dashboard
+  if (user && location.pathname === '/') {
+    console.log('Redirecting to dashboard');
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  console.log('No redirect needed, rendering children');
+  
+  // Otherwise, show the requested page
   return <Index />;
 };
 

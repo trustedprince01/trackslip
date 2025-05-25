@@ -33,19 +33,7 @@ const Dashboard: React.FC = () => {
   const { receipts, loading, error, fetchReceipts } = useReceipts();
   const { formatCurrency } = useCurrency();
   const { user, profile, signOut } = useAuth();
-  
-  if (error) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black text-gray-900 dark:text-white">
-        <div className="text-center p-6">
-          <p className="text-red-500 mb-4">Error loading receipts. Please try again later.</p>
-          <Button onClick={() => fetchReceipts()}>Retry</Button>
-        </div>
-      </div>
-    );
-  }
-  
-  // Calculate tax, discount, and category data
+
   const { totalTax, totalDiscount, categoryData } = useMemo(() => {
     if (!receipts.length) return { 
       totalTax: 0, 
@@ -225,37 +213,32 @@ const Dashboard: React.FC = () => {
     fetchReceipts();
   }, [fetchReceipts]);
   
-  // Fetch store logos when receipts change
+  // Load store logos in useEffect since it has side effects
   useEffect(() => {
-    const fetchLogos = async () => {
+    // Load store logos
+    const loadStoreLogos = async () => {
       const logos: Record<string, string> = {};
+      const uniqueStores = [...new Set(receipts.map(r => r.store_name))];
       
-      // Get unique store names
-      const storeNames = [...new Set(receipts.map(r => r.store_name))];
-      
-      // Fetch logos for each store
-      for (const storeName of storeNames) {
-        if (storeName && !storeLogos[storeName]) {
-          const logo = await getCachedStoreLogo(storeName);
+      for (const store of uniqueStores) {
+        if (store) {
+          const logo = await getCachedStoreLogo(store);
           if (logo) {
-            logos[storeName] = logo;
+            logos[store] = logo;
           }
         }
       }
       
-      // Update state with new logos
-      if (Object.keys(logos).length > 0) {
-        setStoreLogos(prev => ({
-          ...prev,
-          ...logos
-        }));
-      }
+      setStoreLogos(prev => ({
+        ...prev,
+        ...logos
+      }));
     };
     
     if (receipts.length > 0) {
-      fetchLogos();
+      loadStoreLogos();
     }
-  }, [receipts, storeLogos]);
+  }, [receipts, setStoreLogos]);
   
   // Get recent receipts (last 5)
   const recentReceipts = useMemo(() => {
