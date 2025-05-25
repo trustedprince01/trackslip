@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -14,7 +14,6 @@ import { useReceipts } from "@/hooks/useReceipts";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { getCachedStoreLogo } from "@/utils/storeLogo";
 import { categorizeItems, getCategorySpending, Category } from "@/utils/categoryUtils";
 
@@ -32,8 +31,19 @@ const Dashboard: React.FC = () => {
   const [storeLogos, setStoreLogos] = useState<Record<string, string>>({});
   const { receipts, loading, error, fetchReceipts } = useReceipts();
   const { formatCurrency } = useCurrency();
-  const { user, profile, signOut } = useAuth();
-
+  
+  if (error) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black text-gray-900 dark:text-white">
+        <div className="text-center p-6">
+          <p className="text-red-500 mb-4">Error loading receipts. Please try again later.</p>
+          <Button onClick={() => fetchReceipts()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Calculate tax, discount, and category data
   const { totalTax, totalDiscount, categoryData } = useMemo(() => {
     if (!receipts.length) return { 
       totalTax: 0, 
@@ -213,32 +223,37 @@ const Dashboard: React.FC = () => {
     fetchReceipts();
   }, [fetchReceipts]);
   
-  // Load store logos in useEffect since it has side effects
+  // Fetch store logos when receipts change
   useEffect(() => {
-    // Load store logos
-    const loadStoreLogos = async () => {
+    const fetchLogos = async () => {
       const logos: Record<string, string> = {};
-      const uniqueStores = [...new Set(receipts.map(r => r.store_name))];
       
-      for (const store of uniqueStores) {
-        if (store) {
-          const logo = await getCachedStoreLogo(store);
+      // Get unique store names
+      const storeNames = [...new Set(receipts.map(r => r.store_name))];
+      
+      // Fetch logos for each store
+      for (const storeName of storeNames) {
+        if (storeName && !storeLogos[storeName]) {
+          const logo = await getCachedStoreLogo(storeName);
           if (logo) {
-            logos[store] = logo;
+            logos[storeName] = logo;
           }
         }
       }
       
-      setStoreLogos(prev => ({
-        ...prev,
-        ...logos
-      }));
+      // Update state with new logos
+      if (Object.keys(logos).length > 0) {
+        setStoreLogos(prev => ({
+          ...prev,
+          ...logos
+        }));
+      }
     };
     
     if (receipts.length > 0) {
-      loadStoreLogos();
+      fetchLogos();
     }
-  }, [receipts, setStoreLogos]);
+  }, [receipts, storeLogos]);
   
   // Get recent receipts (last 5)
   const recentReceipts = useMemo(() => {
@@ -265,25 +280,13 @@ const Dashboard: React.FC = () => {
         {/* Header Section */}
         <header className="flex justify-between items-center p-6 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-800/20">
           <div>
-            <Link to="/" className="cursor-pointer" onClick={async (e) => {
-              e.preventDefault();
-              // Sign out and then navigate to home
-              await signOut();
-              navigate('/');
-            }}>
-              <h1 className="text-2xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">TrackSlip</h1>
-            </Link>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Welcome back, {profile?.full_name || user?.email?.split('@')[0] || 'User'} 👋</p>
+            <h1 className="text-2xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">SpendSmart</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Welcome back, Prince 👋</p>
           </div>
-          <Avatar 
-            className="h-12 w-12 ring-2 ring-blue-500/20 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900 cursor-pointer"
-            onClick={handleSettingsClick}
-          >
-            <AvatarImage src={profile?.avatar_url} alt={profile?.full_name || user?.email || 'User'} />
+          <Avatar className="h-12 w-12 ring-2 ring-blue-500/20 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900">
+            <AvatarImage src="/lovable-uploads/7a47f95e-8b53-4dfa-9558-06ce420c91ea.png" alt="Prince" />
             <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
-              {profile?.full_name 
-                ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase()
-                : user?.email?.[0]?.toUpperCase() || 'U'}
+              P
             </AvatarFallback>
           </Avatar>
         </header>

@@ -3,7 +3,6 @@ import React, { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, TooltipProps } from "recharts";
 import { format } from "date-fns";
 import { Receipt } from "@/types/receipt";
-import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface SpendingChartProps {
   receipts: Receipt[];
@@ -14,17 +13,13 @@ const months = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
-interface CustomTooltipProps extends TooltipProps<number, string> {
-  formatCurrency: (value: number) => string;
-}
-
-const CustomTooltip = ({ active, payload, label, formatCurrency }: CustomTooltipProps) => {
+const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-gray-800 p-3 rounded-lg border border-gray-700 shadow-lg">
         <p className="font-medium">{label}</p>
         <p className="text-blue-400">
-          {formatCurrency(payload[0].value || 0)}
+          ${payload[0].value?.toFixed(2)}
         </p>
       </div>
     );
@@ -33,8 +28,6 @@ const CustomTooltip = ({ active, payload, label, formatCurrency }: CustomTooltip
 };
 
 export const SpendingChart = ({ receipts }: SpendingChartProps) => {
-  const { formatCurrency } = useCurrency();
-  
   // Group receipts by month and calculate total spent each month
   const monthlyData = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -77,22 +70,10 @@ export const SpendingChart = ({ receipts }: SpendingChartProps) => {
           tick={{ fontSize: 10, fill: '#9ca3af' }}
           axisLine={{ stroke: '#374151' }}
           tickLine={{ stroke: '#374151' }}
-          tickFormatter={(value) => {
-            // Get the currency symbol from the formatCurrency function
-            const formatted = formatCurrency(value);
-            // Extract just the number part
-            const numberPart = formatted.replace(/[^0-9.,]/g, '');
-            // Format with K for thousands, M for millions, etc.
-            if (value >= 1000000) {
-              return `${formatted[0]}${(value / 1000000).toFixed(0)}M`;
-            } else if (value >= 1000) {
-              return `${formatted[0]}${(value / 1000).toFixed(0)}K`;
-            }
-            return formatted;
-          }}
+          tickFormatter={(value) => `$${value}`}
         />
         <Tooltip 
-          content={<CustomTooltip formatCurrency={formatCurrency} />}
+          content={<CustomTooltip />}
         />
         <Bar 
           dataKey="amount"
