@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+
+import React, { useEffect, useRef } from "react";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/HowItWorks";
@@ -11,15 +10,8 @@ import PricingSection from "@/components/PricingSection";
 import FaqSection from "@/components/FaqSection";
 import Footer from "@/components/Footer";
 
-const Index: React.FC = () => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Initialize component and handle scroll animations
+const Index = () => {
   useEffect(() => {
-    const timer = setTimeout(() => setIsInitialized(true), 100);
-    
     const handleScroll = () => {
       const elements = document.querySelectorAll('.animate-on-scroll');
       elements.forEach(el => {
@@ -34,31 +26,14 @@ const Index: React.FC = () => {
       });
     };
     
-    // Set up scroll event listener
     window.addEventListener('scroll', handleScroll);
     // Initial check
     setTimeout(handleScroll, 300);
     
     return () => {
-      clearTimeout(timer);
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
-
-  // Show loading state while checking auth
-  if (loading || !isInitialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-trackslip-blue"></div>
-      </div>
-    );
-  }
-
-  // If user is logged in, redirect to dashboard
-  if (user) {
-    navigate('/dashboard');
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-trackslip-dark text-white font-radio">
