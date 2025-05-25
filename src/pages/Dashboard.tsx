@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getCachedStoreLogo } from "@/utils/storeLogo";
-import { categorizeItems, getCategorySpending, Category } from "@/utils/categoryUtils";
+import { categorizeItems, getCategorySpending, Category, categorizeItem } from "@/utils/categoryUtils";
 
 type Receipt = {
   id: string;
@@ -45,15 +45,14 @@ const Dashboard: React.FC = () => {
     const allItems = receipts.flatMap(receipt => 
       (receipt.items || []).map(item => ({
         ...item,
+        // Use the item's category if it exists, otherwise categorize it
+        category: item.category || categorizeItem(item.name),
         receiptDate: receipt.date // Add receipt date for time-based analysis if needed
       }))
     );
 
-    // Categorize all items
-    const categorizedItems = categorizeItems(allItems);
-    
     // Get spending by category
-    const categorySpending = getCategorySpending(categorizedItems);
+    const categorySpending = getCategorySpending(allItems);
     
     // Calculate tax and discount totals
     const { tax, discount } = receipts.reduce((acc, receipt) => {
@@ -63,7 +62,7 @@ const Dashboard: React.FC = () => {
     }, { tax: 0, discount: 0 });
     
     // Map to PieChartData format with consistent colors
-    const categoryData = categorySpending.map(({ category, amount }, index) => ({
+    const categoryData = categorySpending.map(({ category, amount }) => ({
       name: category,
       value: parseFloat(amount.toFixed(2)),
       color: {
@@ -112,18 +111,31 @@ const Dashboard: React.FC = () => {
     const count = receipts.length;
     const average = count > 0 ? total / count : 0;
     
-    // Calculate top category
+    // Calculate top category by aggregating all items across all receipts
     const categoryTotals = receipts.reduce((acc, receipt) => {
-      const category = receipt.category || 'Uncategorized';
-      acc[category] = (acc[category] || 0) + (receipt.total_amount || 0);
+      // If receipt has items with categories, use those
+      if (receipt.items && receipt.items.length > 0) {
+        receipt.items.forEach(item => {
+          const category = item.category || 'Uncategorized';
+          acc[category] = (acc[category] || 0) + (item.price * (item.quantity || 1));
+        });
+      } else {
+        // Fallback to receipt-level category if no items
+        const category = receipt.category || 'Uncategorized';
+        acc[category] = (acc[category] || 0) + (receipt.total_amount || 0);
+      }
       return acc;
     }, {} as Record<string, number>);
     
+    // Calculate total for percentage calculation
+    const categoryTotal = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0) || 1;
+    
+    // Get top category
     const topCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
     const topCategory = topCategoryEntry ? {
       name: topCategoryEntry[0],
       amount: topCategoryEntry[1],
-      percentage: Math.round((topCategoryEntry[1] / total) * 100)
+      percentage: Math.round((topCategoryEntry[1] / categoryTotal) * 100)
     } : null;
     
     // Calculate monthly spending
