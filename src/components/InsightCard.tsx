@@ -2,6 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "./ui/skeleton";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface InsightCardProps {
   topCategory?: {
@@ -35,6 +36,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
   subscriptionCosts = { count: 0, total: 0 },
   loading = false
 }) => {
+  const { formatCurrency } = useCurrency();
   if (loading) {
     return (
       <Card className="bg-gradient-to-br from-trackslip-blue/20 to-trackslip-lightBlue/10 border-gray-800 rounded-xl shadow-lg mb-6 overflow-hidden">
@@ -88,7 +90,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
       <div key="store" className="bg-gray-800/50 rounded-lg p-3">
         <p className="text-xs text-gray-300">
           You spend the most at <span className="text-trackslip-lightBlue">{topStore.name}</span> 
-          with {topStore.count} receipt {topStore.count !== 1 ? 's' : ''} totaling ${topStore.amount.toFixed(2)}
+          with {topStore.count} receipt {topStore.count !== 1 ? 's' : ''} totaling {formatCurrency(topStore.amount)}
         </p>
       </div>
     );
@@ -99,7 +101,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
     insights.push(
       <div key="daily-spend" className="bg-gray-800/50 rounded-lg p-3">
         <p className="text-xs text-gray-300">
-          You're spending an average of <span className="text-trackslip-lightBlue">${averageDailySpend.toFixed(2)}</span> per day this month
+          You're spending an average of <span className="text-trackslip-lightBlue">{formatCurrency(averageDailySpend)}</span> per day this month
         </p>
       </div>
     );
@@ -128,7 +130,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
       <div key="subscriptions" className="bg-gray-800/50 rounded-lg p-3">
         <p className="text-xs text-gray-300">
           You have {subscriptionCosts.count} active subscription{subscriptionCosts.count !== 1 ? 's' : ''} 
-          costing <span className="text-trackslip-lightBlue">${subscriptionCosts.total.toFixed(2)}</span> this month
+          costing <span className="text-trackslip-lightBlue">{formatCurrency(subscriptionCosts.total)}</span> this month
         </p>
       </div>
     );
@@ -139,7 +141,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
     insights.push(
       <div key="savings" className="bg-gray-800/50 rounded-lg p-3">
         <p className="text-xs text-gray-300">
-          You saved <span className="text-green-400">${totalDiscount.toFixed(2)}</span> from discounts and promotions
+          You saved <span className="text-green-400">{formatCurrency(totalDiscount)}</span> from discounts and promotions
         </p>
       </div>
     );

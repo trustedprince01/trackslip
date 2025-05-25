@@ -151,6 +151,22 @@ const Settings = () => {
     });
   };
 
+  const handleCurrencyChange = async (newCurrency: string) => {
+    try {
+      await setCurrency(newCurrency);
+      toast({
+        title: "Currency updated",
+        description: `Currency set to ${newCurrency}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error updating currency",
+        description: "Failed to save currency preference. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black transition-colors duration-300">
       <div className="w-full max-w-[430px] flex flex-col h-screen relative">

@@ -2,11 +2,12 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
-type UserProfile = {
+export type UserProfile = {
   id: string;
   email: string;
   full_name: string | null;
   avatar_url: string | null;
+  currency: string;
   created_at: string;
   updated_at: string;
 };
@@ -51,14 +52,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userError) throw userError;
       if (!userData.user) return null;
       
-      // Try to get the profile
+      // Try to get the user profile
       let { data: profile, error: fetchError } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
 
-      // If profile doesn't exist, create it
+      // If user profile doesn't exist, create it
       if (!profile || fetchError?.code === 'PGRST116') {
         const { data: newProfile, error: createError } = await supabase
           .from('users')
@@ -66,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: userId, 
             email: userData.user.email || '',
             full_name: userData.user.user_metadata?.full_name || userData.user.email?.split('@')[0] || 'User',
+            currency: '₦', // Default currency
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }])
@@ -77,7 +79,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       if (fetchError) throw fetchError;
-      return profile as UserProfile;
+      
+      // Ensure the profile has a currency field
+      const profileWithCurrency = {
+        ...profile,
+        currency: profile.currency || '₦' // Fallback to default if not set
+      };
+      
+      return profileWithCurrency as UserProfile;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
       return null;
