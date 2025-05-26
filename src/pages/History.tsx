@@ -24,6 +24,8 @@ const History = () => {
   const [sortBy, setSortBy] = useState("date-newest");
   const [logoCache, setLogoCache] = useState<StoreLogoCache>({});
   const [loadingLogos, setLoadingLogos] = useState<{[key: string]: boolean}>({});
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [receiptToDelete, setReceiptToDelete] = useState<{id: string, storeName: string} | null>(null);
 
   // Filter and sort receipts
   const filteredAndSortedReceipts = receipts
@@ -56,13 +58,20 @@ const History = () => {
       }
     });
 
-  const handleDeleteReceipt = async (id: string, storeName: string) => {
-    if (window.confirm(`Are you sure you want to delete the receipt from ${storeName}?`)) {
-      try {
-        await deleteReceipt(id);
-      } catch (error) {
-        console.error('Error deleting receipt:', error);
-      }
+  const handleDeleteClick = (id: string, storeName: string) => {
+    setReceiptToDelete({ id, storeName });
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!receiptToDelete) return;
+    
+    try {
+      await deleteReceipt(receiptToDelete.id);
+      setShowDeleteDialog(false);
+      setReceiptToDelete(null);
+    } catch (error) {
+      console.error('Error deleting receipt:', error);
     }
   };
 
@@ -308,7 +317,7 @@ const History = () => {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteReceipt(receipt.id, receipt.store_name || 'this store');
+                          handleDeleteClick(receipt.id, receipt.store_name || 'this store');
                         }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
                       >
@@ -369,6 +378,42 @@ const History = () => {
           </div>
         </div>
       </div>
+      
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && receiptToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Delete Receipt</h3>
+              <p className="text-center text-gray-600 dark:text-gray-300">
+                Are you sure you want to delete the receipt from <span className="font-medium text-red-600">{receiptToDelete.storeName}</span>? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 w-full mt-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setReceiptToDelete(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={confirmDelete}
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

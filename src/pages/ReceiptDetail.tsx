@@ -20,6 +20,7 @@ const ReceiptDetail = () => {
   const [deleting, setDeleting] = useState(false);
   const [storeLogo, setStoreLogo] = useState<string | null>(null);
   const [logoLoading, setLogoLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const fetchStoreLogo = useCallback(async (storeName: string) => {
     if (!storeName) return;
@@ -58,19 +59,23 @@ const ReceiptDetail = () => {
 
   const handleDelete = async () => {
     if (!id) return;
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!id) return;
     
-    if (window.confirm('Are you sure you want to delete this receipt? This action cannot be undone.')) {
-      try {
-        setDeleting(true);
-        await deleteReceipt(id);
-        toast.success('Receipt deleted successfully');
-        navigate('/history');
-      } catch (error) {
-        console.error('Error deleting receipt:', error);
-        toast.error('Failed to delete receipt');
-      } finally {
-        setDeleting(false);
-      }
+    try {
+      setDeleting(true);
+      await deleteReceipt(id);
+      toast.success('Receipt deleted successfully');
+      navigate('/history');
+    } catch (error) {
+      console.error('Error deleting receipt:', error);
+      toast.error('Failed to delete receipt');
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -324,6 +329,41 @@ const ReceiptDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Delete Receipt</h3>
+              <p className="text-center text-gray-600 dark:text-gray-300">
+                Are you sure you want to delete this receipt? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 w-full mt-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowDeleteDialog(false)}
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

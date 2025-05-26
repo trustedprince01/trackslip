@@ -294,7 +294,7 @@ const Dashboard: React.FC = () => {
         {/* Header Section */}
         <header className="flex justify-between items-center p-6 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-800/20">
           <div>
-            <h1 className="text-2xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">SpendSmart</h1>
+            <h1 className="text-2xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">Trackslip</h1>
             <p className="text-gray-600 dark:text-gray-400 text-sm">Welcome back, {profile?.full_name || user?.email?.split('@')[0] || 'User'} 👋</p>
           </div>
           <Avatar 
