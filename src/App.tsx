@@ -2,7 +2,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -17,8 +17,16 @@ import ReceiptDetail from "./pages/ReceiptDetail";
 import Receipts from "./pages/Receipts";
 import NewExpense from "./pages/NewExpense";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (
@@ -34,12 +42,14 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/history" element={<History />} />
-                  <Route path="/receipts" element={<Receipts />} />
-                  <Route path="/receipts/:id" element={<ReceiptDetail />} />
-                  <Route path="/new-expense" element={<NewExpense />} />
+                  <Route element={<ProtectedRoute />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/history" element={<History />} />
+                    <Route path="/receipts" element={<Receipts />} />
+                    <Route path="/receipts/:id" element={<ReceiptDetail />} />
+                    <Route path="/new-expense" element={<NewExpense />} />
+                  </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>

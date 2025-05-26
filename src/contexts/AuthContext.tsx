@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User, Subscription } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 type UserProfile = {
@@ -16,6 +16,7 @@ type AuthContextType = {
   profile: UserProfile | null;
   session: Session | null;
   loading: boolean;
+  initialized: boolean;
   signIn: (email: string, password: string) => Promise<{
     error: Error | null;
     session: Session | null;
@@ -40,14 +41,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   // Fetch user profile from the database, create if not exists
-  const fetchUserProfile = useCallback(async (userId: string) => {
+  const fetchUserProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
     try {
+      console.log('Fetching profile for user:', userId);
+      
       // First try to get the user
       const { data: userData } = await supabase.auth.getUser();
       
-      if (!userData.user) return null;
+      if (!userData.user) {
+        console.log('No user data found');
+        return null;
+      }
       
       // Try to get the profile
       let { data: profile, error: fetchError } = await supabase
@@ -58,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // If profile doesn't exist, create it
       if (!profile || fetchError?.code === 'PGRST116') {
+        console.log('Creating new profile for user:', userId);
         const { data: newProfile, error: createError } = await supabase
           .from('users')
           .insert([{ 
@@ -74,10 +82,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Error creating user profile:', createError);
           return null;
         }
+        console.log('Profile created successfully:', newProfile);
         return newProfile as UserProfile;
       }
       
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Error fetching profile:', fetchError);
+        return null; // Don't throw, just return null
+      }
+      
+      console.log('Profile fetched successfully:', profile);
       return profile as UserProfile;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
@@ -85,61 +99,138 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Update auth state and fetch profile when session changes
+  // Initialize auth state and set up listener
   useEffect(() => {
-    // Get initial session
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
+    
+    console.log('AuthProvider: Initializing...');
+    
+    // Set initial loading state
+    setLoading(true);
+    setInitialized(false);
+    
+    // Set up a timeout to prevent infinite loading
+    const setLoadingTimeout = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (isMounted) {
+          console.log('AuthProvider: Loading timeout reached, marking as initialized');
+          setLoading(false);
+          setInitialized(true);
+        }
+      }, 10000); // 10 second timeout
+    };
+    
+    setLoadingTimeout();
+    
+    // Set up the auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session);
-        setSession(session);
-        setUser(session?.user ?? null);
+        if (!isMounted) return;
         
-        if (session?.user) {
-          try {
-            const userProfile = await fetchUserProfile(session.user.id);
-            setProfile(userProfile);
-          } catch (error) {
-            console.error('Error fetching user profile:', error);
+        console.log('Auth state changed:', event, session?.user?.email || 'no user');
+        
+        // Clear any existing timeout
+        if (timeoutId) clearTimeout(timeoutId);
+        
+        try {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            console.log('User session found, fetching profile...');
+            // Don't wait indefinitely for profile
+            const profilePromise = fetchUserProfile(session.user.id);
+            const timeoutPromise = new Promise<UserProfile | null>((resolve) => {
+              setTimeout(() => {
+                console.log('Profile fetch timeout, continuing without profile');
+                resolve(null);
+              }, 5000); // 5 second timeout for profile fetch
+            });
+            
+            const userProfile = await Promise.race([profilePromise, timeoutPromise]);
+            
+            if (isMounted) {
+              setProfile(userProfile);
+            }
+          } else {
+            console.log('No user session, clearing profile');
+            setProfile(null);
           }
-        } else {
-          setProfile(null);
+        } catch (error) {
+          console.error('Error in auth state change handler:', error);
+          // Don't let profile errors block initialization
+        } finally {
+          // Always mark as initialized after handling auth state
+          if (isMounted) {
+            console.log('Auth state change complete, marking as initialized');
+            setLoading(false);
+            setInitialized(true);
+          }
         }
-        
-        setLoading(false);
       }
     );
-
-    // Initialize auth state
-    const initAuth = async () => {
+    
+    // Initial session check with timeout
+    const checkInitialSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          setSession(session);
-          setUser(session.user);
-          const userProfile = await fetchUserProfile(session.user.id);
-          setProfile(userProfile);
+        console.log('Checking initial session...');
+        
+        // Add a race condition with timeout
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<{ data: { session: Session | null }, error: any }>((_, reject) => {
+          setTimeout(() => reject(new Error('Session check timeout')), 5000);
+        });
+        
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+        
+        if (!isMounted) return;
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          throw error;
         }
+        
+        console.log('Initial session check complete:', session?.user?.email || 'no session');
+        
+        // The auth state change listener will handle the session
+        // But if there's no session, we should still initialize
+        if (!session) {
+          console.log('No initial session found, initializing without user');
+          setLoading(false);
+          setInitialized(true);
+        }
+        
       } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        setLoading(false);
+        console.error('Error in checkInitialSession:', error);
+        // Don't block initialization on session check errors
+        if (isMounted) {
+          console.log('Session check failed, initializing anyway');
+          setLoading(false);
+          setInitialized(true);
+        }
       }
     };
-
-    // Initialize auth state
-    initAuth();
-
-    // Cleanup subscription on unmount
+    
+    checkInitialSession();
+    
+    // Cleanup function
     return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
+      console.log('AuthProvider: Cleaning up...');
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+      subscription?.unsubscribe();
     };
-  }, [fetchUserProfile]);
+  }, []); // Remove fetchUserProfile from dependencies to prevent recreation
+
+  // Recreate fetchUserProfile with useCallback but don't include it in useEffect dependencies
+  const memoizedFetchUserProfile = useCallback(fetchUserProfile, []);
 
   // Sign in with email and password
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -156,18 +247,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      // Update the local state
-      setSession(data.session);
-      setUser(data.session.user);
-      
-      // Fetch and set the user profile
-      try {
-        const userProfile = await fetchUserProfile(data.session.user.id);
-        setProfile(userProfile);
-      } catch (profileError) {
-        console.error('Error fetching user profile after sign in:', profileError);
-        // Don't fail the sign in if profile fetch fails
-      }
+      // The auth state change listener will handle setting the session and profile
+      console.log('Sign in successful for:', email);
       
       return { error: null, session: data.session };
     } catch (error) {
@@ -176,12 +257,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error: error instanceof Error ? error : new Error('Failed to sign in'), 
         session: null 
       };
+    } finally {
+      setLoading(false);
     }
   };
 
   // Sign up with email and password and optional user metadata
   const signUp = async (email: string, password: string, userMetadata?: Record<string, any>) => {
     try {
+      setLoading(true);
       const fullName = userMetadata?.full_name || email.split('@')[0] || 'User';
       
       const { data, error } = await supabase.auth.signUp({
@@ -198,8 +282,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
       
-      // The profile will be automatically created by the fetchUserProfile function
-      // which is called in the auth state change listener
+      // The auth state change listener will handle profile creation
+      console.log('Sign up successful for:', email);
       
       return { 
         error: null, 
@@ -211,19 +295,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error: error instanceof Error ? error : new Error('Failed to sign up'), 
         user: null 
       };
+    } finally {
+      setLoading(false);
     }
   };
 
   // Sign out
   const signOut = async () => {
     try {
+      setLoading(true);
+      // Save the current currency preference before clearing storage
+      const savedCurrency = localStorage.getItem('selectedCurrency');
+      
+      // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
+      // Clear all local storage and session storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Restore the currency preference
+      if (savedCurrency) {
+        localStorage.setItem('selectedCurrency', savedCurrency);
+      }
+      
+      // Clear all indexedDB databases except for the ones we want to keep
+      if (window.indexedDB) {
+        const dbs = await window.indexedDB.databases();
+        dbs.forEach(db => {
+          if (db.name && !db.name.includes('currency')) { // Skip currency-related DBs
+            window.indexedDB.deleteDatabase(db.name);
+          }
+        });
+      }
+      
+      // Clear cookies except for the ones we want to keep
+      document.cookie.split(';').forEach(c => {
+        const cookieName = c.trim().split('=')[0];
+        if (!cookieName.toLowerCase().includes('currency')) { // Skip currency-related cookies
+          document.cookie = cookieName + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
+        }
+      });
+      
+      // Clear local state
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      
+      // Force a hard redirect to the login page to clear any cached data
+      window.location.href = '/login';
+      
+      console.log('Sign out successful');
       return { error: null };
     } catch (error) {
       console.error('Error signing out:', error);
-      return { error: error as Error };
+      return { error: error instanceof Error ? error : new Error('Failed to sign out') };
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -268,7 +397,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Refresh user profile
   const refreshProfile = async () => {
     if (!user) return;
-    const userProfile = await fetchUserProfile(user.id);
+    const userProfile = await memoizedFetchUserProfile(user.id);
     setProfile(userProfile);
   };
 
@@ -277,6 +406,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     session,
     loading,
+    initialized,
     signIn,
     signUp,
     signOut,
@@ -287,7 +417,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {initialized ? children : (
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Initializing your session...</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">This should only take a moment</p>
+          </div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 };

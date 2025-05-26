@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, signOut } = useAuth();
   const [notifications, setNotifications] = React.useState(true);
   const [receiptScanning, setReceiptScanning] = React.useState(true);
   const { currency, setCurrency } = useCurrency();
@@ -116,12 +116,27 @@ const Settings = () => {
     navigate("/dashboard");
   };
 
-  const handleLogout = () => {
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of your account",
-    });
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      // Sign out using the auth context
+      const { error } = await signOut();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account",
+      });
+      
+      // The signOut function will handle the redirect
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSaveChanges = () => {
