@@ -283,10 +283,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Email and password are required');
       }
       
-      if (phone && !countryCode) {
-        console.warn('Phone number provided without country code');
-      }
-      
       // Sign up the user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -300,14 +296,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             phone: phone || null,
             country_code: countryCode || null
           },
-          // Add email confirmation if needed
           emailRedirectTo: `${window.location.origin}/dashboard`
         }
       });
 
       if (error) throw error;
       
-      // The auth state change listener will handle profile creation
+      // After successful auth signup, save to users table
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('users')
+          .upsert({
+            id: data.user.id,
+            email: email,
+            full_name: fullName,
+            phone: phone || null,
+            country_code: countryCode || null,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'id'
+          });
+          
+        if (profileError) {
+          console.error('Error saving user profile:', profileError);
+          // Don't fail the signup if profile save fails, just log it
+        }
+      }
+      
       console.log('Sign up successful for:', email);
       
       return { 
