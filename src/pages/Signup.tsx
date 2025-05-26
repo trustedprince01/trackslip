@@ -1,38 +1,183 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Mail, Lock, User, Loader2, Eye, EyeOff, X, Phone } from "lucide-react";
+import { Mail, Lock, User, Loader2, Eye, EyeOff, X, ChevronDown, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+
+// Country data with name, dial code, and flag
+const countries = [
+  { name: 'United States', code: 'US', dialCode: '+1', flag: '🇺🇸' },
+  { name: 'United Kingdom', code: 'GB', dialCode: '+44', flag: '🇬🇧' },
+  { name: 'Canada', code: 'CA', dialCode: '+1', flag: '🇨🇦' },
+  { name: 'Nigeria', code: 'NG', dialCode: '+234', flag: '🇳🇬' },
+  { name: 'Ghana', code: 'GH', dialCode: '+233', flag: '🇬🇭' },
+  { name: 'Kenya', code: 'KE', dialCode: '+254', flag: '🇰🇪' },
+  { name: 'South Africa', code: 'ZA', dialCode: '+27', flag: '🇿🇦' },
+  { name: 'India', code: 'IN', dialCode: '+91', flag: '🇮🇳' },
+  { name: 'France', code: 'FR', dialCode: '+33', flag: '🇫🇷' },
+  { name: 'Germany', code: 'DE', dialCode: '+49', flag: '🇩🇪' },
+  { name: 'China', code: 'CN', dialCode: '+86', flag: '🇨🇳' },
+  { name: 'Japan', code: 'JP', dialCode: '+81', flag: '🇯🇵' },
+  { name: 'Australia', code: 'AU', dialCode: '+61', flag: '🇦🇺' },
+  { name: 'Brazil', code: 'BR', dialCode: '+55', flag: '🇧🇷' },
+].sort((a, b) => a.name.localeCompare(b.name));
+
+// Format phone number based on country
+const formatPhoneNumber = (value: string, countryCode: string) => {
+  // Remove all non-digit characters
+  const cleaned = value.replace(/\D/g, '');
+  
+  // Apply different formatting based on country
+  switch(countryCode) {
+    case 'US':
+    case 'CA':
+      // Format as (XXX) XXX-XXXX
+      const match = cleaned.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+      if (match) {
+        return !match[2] 
+          ? match[1] 
+          : `(${match[1]}) ${match[2]}${match[3] ? `-${match[3]}` : ''}`;
+      }
+      break;
+    case 'GB':
+      // Format as XXXX XXX XXXX
+      return cleaned.replace(/(\d{4})(\d{3})(\d{3,4})/, '$1 $2 $3');
+    case 'NG':
+    case 'GH':
+    case 'KE':
+      // Format as XXX XXX XXXX for African countries
+      return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+    default:
+      // Default format: XXX XXX XXXX
+      return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+  }
+  
+  return cleaned;
+};
+
+// Validate phone number based on country
+const validatePhoneNumber = (phone: string, countryCode: string) => {
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Define patterns for different countries
+  const patterns: Record<string, RegExp> = {
+    'US': /^[2-9]\d{9}$/,       // US/Canada: 10 digits, doesn't start with 1
+    'CA': /^[2-9]\d{9}$/,       // Same as US for now
+    'GB': /^7\d{9}$/,          // UK: 10 digits starting with 7
+    'NG': /^[7-9]\d{9}$/,      // Nigeria: 10 digits starting with 7,8, or 9
+    'GH': /^[2-9]\d{8}$/,      // Ghana: 9 digits starting with 2-9
+    'KE': /^[17]\d{8}$/,       // Kenya: 9 digits starting with 1 or 7
+    'ZA': /^[6-8]\d{8}$/,      // South Africa: 9 digits starting with 6-8
+    'IN': /^[6-9]\d{9}$/,      // India: 10 digits starting with 6-9
+    'FR': /^[6-7]\d{8}$/,      // France: 9 digits starting with 6 or 7
+    'DE': /^[15]\d{9,10}$/,    // Germany: 10-11 digits starting with 15 or 1
+    'CN': /^1[3-9]\d{9}$/,     // China: 11 digits starting with 13-9
+    'JP': /^[7-9]0\d{8}$/,     // Japan: 10 digits starting with 70-90
+    'AU': /^[4-5]\d{8}$/,      // Australia: 9 digits starting with 4 or 5
+    'BR': /^[1-9]\d{9,10}$/    // Brazil: 10-11 digits, doesn't start with 0
+  };
+  
+  const pattern = patterns[countryCode] || /^\d{6,15}$/; // Default: 6-15 digits
+  return pattern.test(cleaned);
+};
 
 const Signup = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState(countries[0]);
+  const [filteredCountries, setFilteredCountries] = useState(countries);
+  const [isCountrySelectOpen, setIsCountrySelectOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPhoneValid, setIsPhoneValid] = useState<boolean | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { signUp } = useAuth();
 
   const from = location.state?.from?.pathname || "/dashboard";
 
+  // Filter countries based on search term
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredCountries(countries);
+    } else {
+      const term = searchTerm.toLowerCase();
+      const filtered = countries.filter(
+        country =>
+          country.name.toLowerCase().includes(term) ||
+          country.dialCode.includes(term) ||
+          country.code.toLowerCase().includes(term)
+      );
+      setFilteredCountries(filtered);
+    }
+  }, [searchTerm]);
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    // Only allow digits and common formatting characters
+    const cleaned = input.replace(/[^\d\s\-()]/g, '');
+    const formatted = formatPhoneNumber(cleaned, selectedCountry.code);
+    setPhone(formatted);
+    
+    // Validate phone number as user types
+    if (formatted.trim() === '') {
+      setIsPhoneValid(null);
+    } else {
+      const phoneNumber = formatted.replace(/\D/g, '');
+      const isValid = validatePhoneNumber(phoneNumber, selectedCountry.code);
+      setIsPhoneValid(isValid);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Validate form fields
+    if (!firstName.trim() || !lastName.trim() || !email || !phone || !password) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // Validate phone number
+    const phoneNumber = phone.replace(/\D/g, '');
+    const isPhoneValid = validatePhoneNumber(phoneNumber, selectedCountry.code);
+    
+    if (!isPhoneValid) {
+      setError('Please enter a valid phone number for the selected country');
+      setIsPhoneValid(false);
+      return;
+    }
+    
+    setIsPhoneValid(true);
+
     setIsLoading(true);
 
     try {
-      const fullName = `${firstName} ${lastName}`.trim();
+      // Format phone number with country code
+      const formattedPhone = `${selectedCountry.dialCode}${phoneNumber}`;
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      
       const { error: signUpError } = await signUp(email, password, { 
         full_name: fullName,
-        phone: phone 
+        phone: formattedPhone,
+        country_code: selectedCountry.code
       });
       
       if (signUpError) {
@@ -43,7 +188,25 @@ const Signup = () => {
       navigate(from, { replace: true });
     } catch (err) {
       console.error("Signup error:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to create account. Please try again.";
+      let errorMessage = "Failed to create account. Please try again.";
+      
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = String(err.message);
+      }
+      
+      // Handle common Supabase errors
+      if (errorMessage.includes('User already registered')) {
+        errorMessage = 'This email is already registered. Please log in instead.';
+      } else if (errorMessage.includes('Invalid email')) {
+        errorMessage = 'Please enter a valid email address';
+      } else if (errorMessage.includes('Password should be at least 6 characters')) {
+        errorMessage = 'Password must be at least 6 characters long';
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -130,20 +293,118 @@ const Signup = () => {
                   <Mail className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
                 </div>
                 
-                <div className="relative">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
                   <div className="flex">
-                    <div className="flex items-center px-3 bg-gray-800/50 border border-gray-700/50 border-r-0 rounded-l-md">
-                      <span className="text-white text-sm mr-2">🇺🇸</span>
-                      <span className="text-gray-400 text-sm">+1</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCountrySelectOpen(!isCountrySelectOpen);
+                          setSearchTerm('');
+                        }}
+                        className="flex items-center justify-center h-12 w-24 bg-gray-800/50 border border-gray-700/50 rounded-l-md text-white hover:bg-gray-700/50 transition-colors"
+                      >
+                        <span className="text-lg mr-2">{selectedCountry.flag}</span>
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      </button>
+                      
+                      {isCountrySelectOpen && (
+                        <div className="absolute z-20 mt-1 w-80 bg-gray-800 border border-gray-700 rounded-md shadow-lg max-h-80 overflow-hidden">
+                          <div className="sticky top-0 bg-gray-800 p-2 border-b border-gray-700">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <input
+                                type="text"
+                                placeholder="Search country..."
+                                className="w-full pl-10 pr-4 py-2 bg-gray-700/50 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                autoFocus
+                              />
+                            </div>
+                          </div>
+                          <div className="py-1 overflow-y-auto max-h-64">
+                            {filteredCountries.length > 0 ? (
+                              filteredCountries.map((country) => (
+                                <button
+                                  key={country.code}
+                                  type="button"
+                                  className={`flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-700/50 ${
+                                    selectedCountry.code === country.code ? 'bg-blue-600/20' : ''
+                                  }`}
+                                  onClick={() => {
+                                    setSelectedCountry(country);
+                                    setIsCountrySelectOpen(false);
+                                    setSearchTerm('');
+                                  }}
+                                >
+                                  <span className="text-lg mr-3 w-6 text-center">{country.flag}</span>
+                                  <span className="text-gray-300 flex-1">{country.name}</span>
+                                  <span className="text-gray-400 text-xs">{country.dialCode}</span>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-4 py-3 text-sm text-gray-400 text-center">
+                                No countries found
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <Input
-                      type="tel"
-                      placeholder="(650) 346-5632"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="h-12 bg-gray-800/50 border-gray-700/50 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-l-none border-l-0"
-                      disabled={isLoading}
-                    />
+                    
+                    <div className="relative flex-1">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-400 text-sm">
+                          {selectedCountry.dialCode}
+                        </span>
+                      </div>
+                      <div className="relative flex-1">
+                        <Input
+                          type="tel"
+                          placeholder="123 456 7890"
+                          value={phone}
+                          onChange={handlePhoneChange}
+                          className={`h-12 pl-20 bg-gray-800/50 border-gray-700/50 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500/20 rounded-l-none ${
+                            isPhoneValid === false ? 'border-red-500' : ''
+                          } ${
+                            isPhoneValid === true ? 'border-green-500' : ''
+                          }`}
+                          disabled={isLoading}
+                          required
+                        />
+                        {isPhoneValid === true && (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                            ✓
+                          </span>
+                        )}
+                        {isPhoneValid === false && (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+                            ✕
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-xs text-gray-400">
+                      Format: {selectedCountry.flag} {selectedCountry.name} {selectedCountry.dialCode}
+                    </p>
+                    {phone && (
+                      <p className={`text-xs ${
+                        isPhoneValid === false ? 'text-red-400' : 'text-green-400'
+                      }`}>
+                        {isPhoneValid === false ? 'Invalid' : 'Valid'} number: {selectedCountry.dialCode} {phone}
+                      </p>
+                    )}
+                    {isPhoneValid === false && (
+                      <p className="text-xs text-red-400">
+                        Please enter a valid {selectedCountry.name} phone number
+                      </p>
+                    )}
                   </div>
                 </div>
                 

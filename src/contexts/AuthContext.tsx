@@ -6,6 +6,8 @@ type UserProfile = {
   id: string;
   email: string;
   full_name: string | null;
+  phone: string | null;
+  country_code: string | null;
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
@@ -66,12 +68,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If profile doesn't exist, create it
       if (!profile || fetchError?.code === 'PGRST116') {
         console.log('Creating new profile for user:', userId);
+        const userMetadata = userData.user.user_metadata || {};
+        
         const { data: newProfile, error: createError } = await supabase
           .from('users')
           .insert([{ 
             id: userId, 
             email: userData.user.email || '',
-            full_name: userData.user.user_metadata?.full_name || userData.user.email?.split('@')[0] || 'User',
+            full_name: userMetadata.full_name || userData.user.email?.split('@')[0] || 'User',
+            phone: userMetadata.phone || null,
+            country_code: userMetadata.country_code || null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }])
@@ -263,11 +269,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Sign up with email and password and optional user metadata
-  const signUp = async (email: string, password: string, userMetadata?: Record<string, any>) => {
+  const signUp = async (email: string, password: string, userMetadata: Record<string, any> = {}) => {
     try {
       setLoading(true);
-      const fullName = userMetadata?.full_name || email.split('@')[0] || 'User';
       
+      // Extract and validate required fields
+      const fullName = userMetadata?.full_name || email.split('@')[0] || 'User';
+      const phone = userMetadata?.phone || '';
+      const countryCode = userMetadata?.country_code || '';
+      
+      // Validate required fields
+      if (!email || !password) {
+        throw new Error('Email and password are required');
+      }
+      
+      if (phone && !countryCode) {
+        console.warn('Phone number provided without country code');
+      }
+      
+      // Sign up the user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -275,8 +295,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             ...userMetadata,
             full_name: fullName,
-            email_verified: false
-          }
+            email_verified: false,
+            // Store phone and country code in user_metadata
+            phone: phone || null,
+            country_code: countryCode || null
+          },
+          // Add email confirmation if needed
+          emailRedirectTo: `${window.location.origin}/dashboard`
         }
       });
 
@@ -374,23 +399,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return { error: new Error('No user logged in'), profile: null };
     
     try {
+      setLoading(true);
+      
+      // Prepare the update data
+      const updateData: any = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+
+      // If phone is being updated, ensure it's properly formatted
+      if (updates.phone) {
+        // Remove any non-digit characters
+        updateData.phone = updates.phone.replace(/\D/g, '');
+      }
+
       const { data, error } = await supabase
         .from('users')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', user.id)
         .select()
         .single();
 
       if (error) throw error;
       
+      // Also update the user metadata in auth if needed
+      if (updates.phone || updates.country_code) {
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: {
+            phone: updates.phone || null,
+            country_code: updates.country_code || null
+          }
+        });
+        
+        if (metadataError) {
+          console.error('Error updating user metadata:', metadataError);
+          // Don't fail the whole update for metadata errors
+        }
+      }
+      
       setProfile(data);
       return { error: null, profile: data };
     } catch (error) {
       console.error('Error updating profile:', error);
-      return { error: error as Error, profile: null };
+      return { 
+        error: error instanceof Error ? error : new Error('Failed to update profile'), 
+        profile: null 
+      };
+    } finally {
+      setLoading(false);
     }
   };
 
