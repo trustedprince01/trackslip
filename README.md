@@ -23,6 +23,14 @@ Track your expenses, gain insights, and manage your finances with AI-powered ana
   - Budget tracking
   - Custom reports
 
+## 📱 Screenshots
+
+| Capture | Extract | Manage |
+|--------|--------|--------|
+| ![Capture](https://github.com/user-attachments/assets/458a19fa-2cc1-483e-abbd-2cd0cf75c99a) | ![Extract](https://github.com/user-attachments/assets/059bc146-7277-4a7f-a6c6-81d88544fb63) | ![Manage](https://github.com/user-attachments/assets/8b4a082a-ba40-46c9-b55c-b7477d0da197) |
+
+*Note: Replace the placeholder image URLs with your actual screenshots when ready*
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -48,8 +56,12 @@ Track your expenses, gain insights, and manage your finances with AI-powered ana
 3. Set up environment variables:
    Create a `.env` file:
    ```
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+    let supabaseURL = "YOUR_SUPABASE_URL"
+    let supabaseAnonKey = "YOUR_SUPABASE_ANON_KEY"
+    let supabaseServiceRoleKey = "YOUR_SUPABASE_SERVICE_ROLE_KEY"
+    let geminiAPIKey = "YOUR_GEMINI_API_KEY"
+    let secretKey = "YOUR_SECRET_BACKEND_KEY"
+    let imgBBAPIKey = "YOUR_IMGBB_API_KEY"
    ```
 
 4. Start the development server:
