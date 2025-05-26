@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
+import { Link, useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -29,9 +31,9 @@ const Header = () => {
     )}>
       <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
         <div className="flex items-center">
-          <a href="#" className="text-white font-radio text-xl">
+          <Link to="/" className="text-white font-radio text-xl">
             Track<span className="text-trackslip-teal">Slip</span>
-          </a>
+          </Link>
         </div>
 
         {/* Desktop Navigation */}
@@ -85,10 +87,17 @@ const Header = () => {
 
         {/* Desktop CTA Buttons */}
         <div className="hidden md:flex items-center space-x-4">
-          <Button variant="ghost" className="font-radio text-white/90 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 text-sm">
+          <Button 
+            variant="ghost" 
+            className="font-radio text-white/90 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
+            onClick={() => navigate('/login')}
+          >
             Log in
           </Button>
-          <Button className="bg-trackslip-blue hover:bg-trackslip-blue/90 font-radio text-white border border-trackslip-blue/50 text-sm px-5">
+          <Button 
+            className="bg-trackslip-blue hover:bg-trackslip-blue/90 font-radio text-white border border-trackslip-blue/50 text-sm px-5"
+            onClick={() => navigate('/signup')}
+          >
             Sign up free
           </Button>
         </div>
@@ -112,14 +121,45 @@ const Header = () => {
       {mobileMenuOpen && (
         <div className="md:hidden bg-black/95 backdrop-blur-xl absolute w-full py-4 shadow-lg border-t border-white/5">
           <nav className="flex flex-col space-y-4 px-6">
-            <a href="#" className="text-white/90 hover:text-white font-radio text-sm py-2" onClick={() => setMobileMenuOpen(false)}>Home</a>
-            <a href="#features" className="text-white/90 hover:text-white font-radio text-sm py-2" onClick={() => setMobileMenuOpen(false)}>Features</a>
-            <a href="#pricing" className="text-white/90 hover:text-white font-radio text-sm py-2" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
+            <Link 
+              to="/" 
+              className="text-white/90 hover:text-white font-radio text-sm py-2 block" 
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Home
+            </Link>
+            <Link 
+              to="#features" 
+              className="text-white/90 hover:text-white font-radio text-sm py-2 block" 
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Features
+            </Link>
+            <Link 
+              to="#pricing" 
+              className="text-white/90 hover:text-white font-radio text-sm py-2 block" 
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Pricing
+            </Link>
             <div className="border-t border-white/10 pt-4 flex flex-col space-y-3">
-              <Button variant="ghost" className="text-white/90 hover:text-white hover:bg-white/5 font-radio text-sm justify-start">
+              <Button 
+                variant="ghost" 
+                className="text-white/90 hover:text-white hover:bg-white/5 font-radio text-sm justify-start"
+                onClick={() => {
+                  navigate('/login');
+                  setMobileMenuOpen(false);
+                }}
+              >
                 Log in
               </Button>
-              <Button className="bg-trackslip-blue hover:bg-trackslip-blue/90 font-radio text-sm text-white">
+              <Button 
+                className="bg-trackslip-blue hover:bg-trackslip-blue/90 font-radio text-sm text-white"
+                onClick={() => {
+                  navigate('/signup');
+                  setMobileMenuOpen(false);
+                }}
+              >
                 Sign up free
               </Button>
             </div>
