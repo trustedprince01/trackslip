@@ -46,7 +46,7 @@ const AppScreenshots = () => {
             <CardContent className="p-1 flex-1">
               <div className="aspect-[9/16] overflow-hidden rounded-md">
                 <img 
-                  src="/images/scan.png" 
+                  src="/images/2.png" 
                   alt="Receipt Scanning Process" 
                   className="w-full h-full object-cover"
                 />
@@ -61,7 +61,7 @@ const AppScreenshots = () => {
             <CardContent className="p-1 flex-1">
               <div className="aspect-[9/16] overflow-hidden rounded-md">
                 <img 
-                  src="/images/analysis.png" 
+                  src="/images/4.png" 
                   alt="Analysis Screen" 
                   className="w-full h-full object-cover"
                 />
@@ -76,7 +76,7 @@ const AppScreenshots = () => {
             <CardContent className="p-1 flex-1">
               <div className="aspect-[9/16] overflow-hidden rounded-md">
                 <img 
-                  src="/images/dashboard.png" 
+                  src="/images/1.png" 
                   alt="Dashboard View" 
                   className="w-full h-full object-cover"
                 />

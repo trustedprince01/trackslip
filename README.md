@@ -27,9 +27,9 @@ Track your expenses, gain insights, and manage your finances with AI-powered ana
 
 | Capture | Extract | Manage |
 |--------|--------|--------|
-| ![Capture](https://github.com/user-attachments/assets/458a19fa-2cc1-483e-abbd-2cd0cf75c99a) | ![Extract](https://github.com/user-attachments/assets/059bc146-7277-4a7f-a6c6-81d88544fb63) | ![Manage](https://github.com/user-attachments/assets/8b4a082a-ba40-46c9-b55c-b7477d0da197) |
+| ![Capture](/public/images/2.png) | ![Extract](/public/images/4.png) | ![Manage](/public/images/1.png) | 
 
-*Note: Replace the placeholder image URLs with your actual screenshots when ready*
+
 
 ## 🚀 Getting Started
 
