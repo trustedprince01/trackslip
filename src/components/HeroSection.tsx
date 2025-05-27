@@ -1,8 +1,14 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { useNavigate } from 'react-router-dom';
 
-const HeroSection = () => {
+interface HeroSectionProps {
+  setMobileMenuOpen?: (open: boolean) => void;
+}
+
+const HeroSection = ({ setMobileMenuOpen }: HeroSectionProps) => {
+  const navigate = useNavigate();
   return (
     <section 
       className="relative min-h-screen w-full flex items-center justify-center overflow-hidden"
@@ -23,12 +29,30 @@ const HeroSection = () => {
             Snap a photo. Let AI do the rest.
           </p>
           <div className="mt-10 flex flex-wrap gap-5 justify-center fade-in-delay-2">
-            <Button className="bg-trackslip-blue hover:bg-trackslip-blue/90 font-radio font-normal text-white border border-trackslip-blue/50 px-8 py-6 text-base rounded-md">
-              Start Tracking Free
+            <Button 
+            className="bg-trackslip-blue hover:bg-trackslip-blue/90 font-radio font-normal text-white border border-trackslip-blue/50 px-8 py-6 text-base rounded-md"
+            onClick={() => {
+              navigate('/login');
+              setMobileMenuOpen(false);
+            }}
+            >
+            Start Tracking Free
             </Button>
-            <Button variant="outline" className="border-white/30 text-white hover:bg-white/5 font-radio font-normal px-8 py-6 text-base rounded-md">
+            
+            <Button 
+              variant="outline" 
+              className="border-white/30 text-white hover:bg-white/5 font-radio font-normal px-8 py-6 text-base rounded-md"
+              onClick={() => {
+                const appScreenshots = document.getElementById('app-screenshots');
+                if (appScreenshots) {
+                  appScreenshots.scrollIntoView({ behavior: 'smooth' });
+                }
+                setMobileMenuOpen?.(false);
+              }}
+            >
               Watch Demo
             </Button>
+
           </div>
           <div className="mt-12 text-gray-300 fade-in-delay-3">
             <p className="flex items-center justify-center font-radio text-sm">

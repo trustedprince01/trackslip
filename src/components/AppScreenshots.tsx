@@ -29,7 +29,7 @@ const AppScreenshots = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-20 bg-trackslip-dark relative overflow-hidden" id="app">
+    <section ref={sectionRef} className="py-20 bg-trackslip-dark relative overflow-hidden" id="app-screenshots">
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/0 via-trackslip-blue/5 to-black/0 pointer-events-none"></div>
       
       <div className="container mx-auto px-4 md:px-6">

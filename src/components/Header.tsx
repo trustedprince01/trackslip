@@ -56,7 +56,7 @@ const Header = () => {
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="w-[260px] bg-black/90 backdrop-blur-xl p-4 rounded-md border border-white/10">
-                    <ul className="space-y-2">
+                    <ul className="space-y-4">
                       <li>
                         <NavigationMenuLink href="#" className="block text-sm text-white/80 hover:text-trackslip-teal p-2 rounded-md hover:bg-white/5">
                           For Individuals
