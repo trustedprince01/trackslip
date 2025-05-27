@@ -1,10 +1,9 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, Bell, Moon, Sun, User, CreditCard, Lock, HelpCircle, LogOut, Home, History, Settings as SettingsIcon, ChevronRight, Edit2, X, Check, Upload, Loader2 } from "lucide-react";
+import { ChevronLeft, Bell, Moon, Sun, User, CreditCard, Lock, HelpCircle, LogOut, Home, History, Settings as SettingsIcon, ChevronRight, Edit2, X, Check, Upload, Loader2, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -23,15 +22,28 @@ const Settings = () => {
   const { isDarkMode, toggleTheme } = useTheme();
   const [isEditing, setIsEditing] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
-  const [editName, setEditName] = React.useState('');
+  const [editData, setEditData] = React.useState({
+    username: '',
+    full_name: '',
+    phone: ''
+  });
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
-  // Initialize edit name when profile loads
+  // Initialize edit data when profile loads
   React.useEffect(() => {
-    if (profile?.full_name) {
-      setEditName(profile.full_name);
+    if (profile) {
+      setEditData({
+        username: profile.full_name?.toLowerCase().replace(/\s+/g, '') || user?.email?.split('@')[0] || '',
+        full_name: profile.full_name || user?.email?.split('@')[0] || '',
+        phone: profile.phone || ''
+      });
     } else if (user?.email) {
-      setEditName(user.email.split('@')[0]);
+      const defaultUsername = user.email.split('@')[0];
+      setEditData({
+        username: defaultUsername,
+        full_name: defaultUsername,
+        phone: ''
+      });
     }
   }, [profile, user]);
 
@@ -86,7 +98,10 @@ const Settings = () => {
 
   const handleSaveProfile = async () => {
     try {
-      await updateProfile({ full_name: editName });
+      await updateProfile({ 
+        full_name: editData.full_name,
+        phone: editData.phone 
+      });
       setIsEditing(false);
       toast({
         title: "Success",
@@ -102,6 +117,18 @@ const Settings = () => {
     }
   };
 
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    // Reset to original values
+    if (profile) {
+      setEditData({
+        username: profile.full_name?.toLowerCase().replace(/\s+/g, '') || user?.email?.split('@')[0] || '',
+        full_name: profile.full_name || user?.email?.split('@')[0] || '',
+        phone: profile.phone || ''
+      });
+    }
+  };
+
   const getInitials = () => {
     if (!profile?.full_name) return user?.email?.[0]?.toUpperCase() || 'U';
     return profile.full_name
@@ -110,6 +137,10 @@ const Settings = () => {
       .join('')
       .toUpperCase()
       .substring(0, 2);
+  };
+
+  const getDisplayUsername = () => {
+    return profile?.full_name?.toLowerCase().replace(/\s+/g, '') || user?.email?.split('@')[0] || 'user';
   };
 
   const handleBack = () => {
@@ -169,8 +200,9 @@ const Settings = () => {
           {/* Profile Section */}
           <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-2xl shadow-lg">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-4 flex-1">
+                  {/* Avatar Section */}
                   <div className="relative group">
                     <Avatar className="h-16 w-16 text-xl font-bold shadow-lg">
                       <AvatarImage src={profile?.avatar_url} />
@@ -199,51 +231,116 @@ const Settings = () => {
                       )}
                     </button>
                   </div>
-                  <div className="ml-4">
+
+                  {/* Profile Info Section */}
+                  <div className="flex-1 space-y-3">
                     {isEditing ? (
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="h-8 w-48"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleSaveProfile}
-                          disabled={!editName.trim() || isUploading}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setIsEditing(false);
-                            setEditName(profile?.full_name || user?.email?.split('@')[0] || '');
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <>
+                        {/* Username Field */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Username</label>
+                          <Input
+                            value={editData.username}
+                            onChange={(e) => setEditData(prev => ({ ...prev, username: e.target.value }))}
+                            className="h-8 text-sm"
+                            placeholder="Enter username"
+                          />
+                        </div>
+                        
+                        {/* Full Name Field */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Full Name</label>
+                          <Input
+                            value={editData.full_name}
+                            onChange={(e) => setEditData(prev => ({ ...prev, full_name: e.target.value }))}
+                            className="h-8 text-sm"
+                            placeholder="Enter full name"
+                          />
+                        </div>
+
+                        {/* Phone Field */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Phone</label>
+                          <Input
+                            value={editData.phone}
+                            onChange={(e) => setEditData(prev => ({ ...prev, phone: e.target.value }))}
+                            className="h-8 text-sm"
+                            placeholder="Enter phone number"
+                            type="tel"
+                          />
+                        </div>
+                      </>
                     ) : (
-                      <div className="flex items-center">
-                        <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
-                          {profile?.full_name || user?.email?.split('@')[0] || 'User'}
-                        </h3>
-                        <button
-                          onClick={() => setIsEditing(true)}
-                          className="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                          title="Edit name"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                      <>
+                        {/* Display Mode */}
+                        <div>
+                          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Username</div>
+                          <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            @{getDisplayUsername()}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phone</div>
+                          <div className="text-sm text-gray-700 dark:text-gray-300">
+                            {profile?.phone || 'Not provided'}
+                          </div>
+                        </div>
+                      </>
                     )}
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                      {user?.email || 'No email available'}
-                    </p>
+
+                    {/* Email (always visible) */}
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Email</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {user?.email || 'No email available'}
+                      </div>
+                    </div>
                   </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center space-x-2 ml-4">
+                  {isEditing ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleSaveProfile}
+                        disabled={!editData.full_name.trim() || isUploading}
+                        className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                        title="Save changes"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleCancelEdit}
+                        className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        title="Cancel editing"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsEditing(true)}
+                      className="h-8 w-8 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      title="Edit profile"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
