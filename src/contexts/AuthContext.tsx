@@ -6,6 +6,7 @@ type UserProfile = {
   id: string;
   email: string;
   full_name: string | null;
+  username: string | null;
   phone: string | null;
   country_code: string | null;
   avatar_url: string | null;

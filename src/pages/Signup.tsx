@@ -88,6 +88,7 @@ const validatePhoneNumber = (phone: string, countryCode: string) => {
 const Signup = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [selectedCountry, setSelectedCountry] = useState(countries[0]);
@@ -99,6 +100,14 @@ const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPhoneValid, setIsPhoneValid] = useState<boolean | null>(null);
+  
+  // Generate a default username from first and last name
+  useEffect(() => {
+    if (firstName || lastName) {
+      const generatedUsername = `${firstName?.toLowerCase() || ''}${lastName ? lastName.toLowerCase() : ''}`.replace(/[^a-z0-9_]/g, '');
+      setUsername(generatedUsername);
+    }
+  }, [firstName, lastName]);
   const navigate = useNavigate();
   const location = useLocation();
   const { signUp } = useAuth();
@@ -142,42 +151,43 @@ const Signup = () => {
     e.preventDefault();
     setError(null);
     
-    // Validate form fields
-    if (!firstName.trim() || !lastName.trim() || !email || !phone || !password) {
+    // Basic validation
+    if (!firstName || !lastName || !email || !password) {
       setError('Please fill in all required fields');
       return;
     }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    // Validate phone number
-    const phoneNumber = phone.replace(/\D/g, '');
-    const isPhoneValid = validatePhoneNumber(phoneNumber, selectedCountry.code);
     
-    if (!isPhoneValid) {
+    // Validate phone number if provided
+    const phoneNumber = phone.replace(/\D/g, '');
+    const isValid = validatePhoneNumber(phoneNumber, selectedCountry.code);
+    
+    if (phone && !isValid) {
       setError('Please enter a valid phone number for the selected country');
       setIsPhoneValid(false);
       return;
     }
     
     setIsPhoneValid(true);
-
+    
+    // Validate username (only alphanumeric and underscores, 3-20 chars)
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+      setError('Username must be 3-20 characters and can only contain letters, numbers, and underscores');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
-      // Format phone number with country code
-      const formattedPhone = `${selectedCountry.dialCode}${phoneNumber}`;
-      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      // Format phone number with country code if provided
+      const formattedPhone = phone ? `${selectedCountry.dialCode}${phoneNumber}` : '';
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
       
       const { error: signUpError } = await signUp(email, password, { 
         full_name: fullName,
+        username: username.toLowerCase().trim(),
         phone: formattedPhone,
-        country_code: selectedCountry.code
+        country_code: phone ? selectedCountry.code : null
       });
       
       if (signUpError) {
@@ -205,6 +215,8 @@ const Signup = () => {
         errorMessage = 'Please enter a valid email address';
       } else if (errorMessage.includes('Password should be at least 6 characters')) {
         errorMessage = 'Password must be at least 6 characters long';
+      } else if (errorMessage.includes('duplicate key value violates unique constraint')) {
+        errorMessage = 'This username is already taken. Please choose another one.';
       }
       
       setError(errorMessage);
@@ -254,8 +266,8 @@ const Signup = () => {
             
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="relative">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
                     <Input
                       type="text"
                       placeholder="First name"
@@ -266,8 +278,7 @@ const Signup = () => {
                       required
                     />
                   </div>
-                  
-                  <div className="relative">
+                  <div>
                     <Input
                       type="text"
                       placeholder="Last name"
@@ -278,6 +289,28 @@ const Signup = () => {
                       required
                     />
                   </div>
+                </div>
+                
+                <div>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      placeholder="Username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                      className="h-12 bg-gray-800/50 border-gray-700/50 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500/20 pr-24"
+                      disabled={isLoading}
+                      minLength={3}
+                      maxLength={20}
+                      required
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                      {username.length}/20
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Only letters, numbers, and underscores. 3-20 characters.
+                  </p>
                 </div>
                 
                 <div className="relative">

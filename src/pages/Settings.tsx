@@ -98,7 +98,25 @@ const Settings = () => {
 
   const handleSaveProfile = async () => {
     try {
+      // Basic validation
+      if (!editData.full_name.trim()) {
+        throw new Error('Full name is required');
+      }
+      
+      // Validate username (only alphanumeric and underscores)
+      const usernameRegex = /^[a-zA-Z0-9_]+$/;
+      if (!usernameRegex.test(editData.username)) {
+        throw new Error('Username can only contain letters, numbers, and underscores');
+      }
+      
+      // Validate phone number (basic validation, adjust as needed)
+      const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s\./0-9]*$/;
+      if (editData.phone && !phoneRegex.test(editData.phone)) {
+        throw new Error('Please enter a valid phone number');
+      }
+
       await updateProfile({ 
+        username: editData.username,
         full_name: editData.full_name,
         phone: editData.phone 
       });
