@@ -16,6 +16,8 @@ import History from "./pages/History";
 import ReceiptDetail from "./pages/ReceiptDetail";
 import Receipts from "./pages/Receipts";
 import NewExpense from "./pages/NewExpense";
+import Insights from "./pages/Insights";
+import SmartBudgeting from "./pages/SmartBudgeting";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -49,6 +51,8 @@ function App() {
                     <Route path="/receipts" element={<Receipts />} />
                     <Route path="/receipts/:id" element={<ReceiptDetail />} />
                     <Route path="/new-expense" element={<NewExpense />} />
+                    <Route path="/insights" element={<Insights />} />
+                    <Route path="/smart-budgeting" element={<SmartBudgeting />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
