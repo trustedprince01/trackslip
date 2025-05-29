@@ -3,10 +3,13 @@ export interface BaseReceipt {
   user_id: string;
   store_name: string;
   date: string | Date;
+  time?: string; // Time of purchase in HH:MM format
   total_amount: number;
   subtotal?: number; // Amount before tax and discounts
   tax_amount?: number; // Total tax paid
   discount_amount?: number; // Total discount received
+  payment_method?: string; // e.g., 'Credit Card', 'Cash', 'Mobile Pay'
+  receipt_number?: string; // Original receipt/transaction ID
   items: ReceiptItem[];
   image_url?: string;
   created_at?: string | Date;
@@ -33,9 +36,10 @@ export type Category = 'Food' | 'Utilities' | 'Shopping' | 'Transportation' | 'E
 export interface ReceiptItem {
   id?: string;
   name: string;
-  price: number;
+  price: number; // Total price for the line item (price * quantity)
+  unit_price?: number; // Price per unit
   quantity: number;
   category?: Category; // Categorized item type
-  // Add any other item properties you need
+  description?: string; // Additional item details (size, color, etc.)
   [key: string]: any; // For additional dynamic properties
 }

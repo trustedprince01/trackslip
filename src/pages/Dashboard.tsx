@@ -3,12 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Home, History, Settings, Plus, Search, ArrowDown, Receipt, ShoppingBag, PieChart as PieChartIcon } from "lucide-react";
+import { Home, History, Settings, Plus, Search, ArrowDown, Receipt, ShoppingBag, PieChart as PieChartIcon, Target } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SpendingChart } from "@/components/SpendingChart";
 import { PieChart } from "@/components/PieChart";
 import type { PieChartData } from "@/components/PieChart";
-import { InsightCard } from "@/components/InsightCard";
 import { AddExpenseForm } from "@/components/AddExpenseForm";
 import { useReceipts } from "@/hooks/useReceipts";
 import { format } from "date-fns";
@@ -17,6 +16,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getCachedStoreLogo } from "@/utils/storeLogo";
 import { categorizeItems, getCategorySpending, Category, categorizeItem } from "@/utils/categoryUtils";
+import { InsightCard } from "@/components/InsightCard";
 
 type Receipt = {
   id: string;
@@ -115,7 +115,10 @@ const Dashboard: React.FC = () => {
       topCategory: null,
       monthlySpending: {},
       spendingTrend: 0,
-      topStore: null
+      topStore: null,
+      averageDailySpend: 0,
+      weeklySpendingTrend: 0,
+      subscriptionCosts: { count: 0, total: 0 }
     };
     
     // Basic stats
@@ -281,7 +284,11 @@ const Dashboard: React.FC = () => {
   };
 
   const handleSettingsClick = () => {
-    navigate("/settings");
+    navigate('/settings');
+  };
+
+  const handleSmartBudgetingClick = () => {
+    navigate('/smart-budgeting');
   };
 
   const handleHistoryClick = () => {
@@ -579,6 +586,15 @@ const Dashboard: React.FC = () => {
             >
               <History size={20} />
               <span className="text-xs mt-1">History</span>
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              className="h-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl flex-1 mx-1"
+              onClick={handleSmartBudgetingClick}
+            >
+              <Target size={20} />
+              <span className="text-xs mt-1">Budget</span>
             </Button>
             
             <Button 

@@ -31,21 +31,31 @@ class ReceiptService {
 
   // Get all receipts (both synced and local)
   public async getReceipts(userId: string): Promise<Receipt[]> {
+    console.log('[ReceiptService] Getting receipts for user:', userId);
+    console.log('[ReceiptService] Online status:', this.isOnline);
+    
     try {
       if (this.isOnline) {
+        console.log('[ReceiptService] Fetching from Supabase...');
         const { data, error } = await supabase
           .from('receipts')
           .select('*')
           .eq('user_id', userId)
           .order('date', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+          console.error('[ReceiptService] Supabase error:', error);
+          throw error;
+        }
+        
+        console.log(`[ReceiptService] Received ${data?.length || 0} receipts from Supabase`);
         
         // Convert to Receipt type
         const receipts = data ? data.map(d => this.mapToReceipt(d)) : [];
         
         // Save to local storage as backup
         if (data) {
+          console.log('[ReceiptService] Saving receipts to local storage');
           localStorage.setItem(
             `${this.localStorageKey}_${userId}`, 
             JSON.stringify(receipts.map(r => ({
@@ -60,10 +70,12 @@ class ReceiptService {
         return receipts;
       }
       
+      console.log('[ReceiptService] Offline - falling back to local storage');
       // Fall back to local storage
       return this.getLocalReceipts(userId);
     } catch (error) {
-      console.error('Error fetching receipts:', error);
+      console.error('[ReceiptService] Error in getReceipts:', error);
+      console.log('[ReceiptService] Attempting to use local storage as fallback');
       // Fall back to local storage
       return this.getLocalReceipts(userId);
     }

@@ -50,39 +50,60 @@ class ReceiptProcessingService {
       const prompt = `
       Analyze this receipt image and extract the following information in valid JSON format (without markdown code blocks):
       {
-        "storeName": "Name of the store",
-        "totalAmount": 0.00,
-        "subtotal": 0.00,  // Amount before tax and discounts
-        "taxAmount": 0.00,  // Total tax amount
-        "discountAmount": 0.00,  // Total discount/savings amount
-        "date": "YYYY-MM-DD",
+        "storeName": "Exact name of the store/business",
+        "totalAmount": 0.00, // Total amount paid (including tax and after discounts)
+        "subtotal": 0.00,     // Amount before tax and after discounts
+        "taxAmount": 0.00,    // Total tax amount (e.g., VAT, GST, HST, etc.)
+        "discountAmount": 0.00, // Any discounts, coupons, or savings applied
+        "paymentMethod": "Credit Card", // e.g., Cash, Credit Card, Debit, Mobile Pay, etc.
+        "receiptNumber": "12345", // Receipt/transaction ID if available
+        "date": "YYYY-MM-DD", // Purchase date in YYYY-MM-DD format
+        "time": "HH:MM",      // Purchase time if available
         "items": [
           {
-            "name": "Item name",
-            "price": 0.00,
-            "quantity": 1,
-            "category": "Food" // Categorize each item into one of: Food, Utilities, Shopping, Transportation, Entertainment, Healthcare, or Others
+            "name": "Item name (specific and detailed)",
+            "price": 0.00,     // Total price for this line item
+            "unitPrice": 0.00, // Price per unit if available
+            "quantity": 1,     // Number of units
+            "category": "Food", // Must be one of: Food, Utilities, Shopping, Transportation, Entertainment, Healthcare, or Others
+            "description": "Additional details about this item" // Any extra info (size, color, etc.)
           }
         ]
       }
       
-      Important Rules:
-      - Calculate subtotal as: subtotal = totalAmount + discountAmount - taxAmount
-      - If tax or discount cannot be determined, set to 0
-      - Return ONLY the JSON object, without any markdown code blocks or additional text
-      - If a field cannot be determined, set it to null
-      - For the date, use the format YYYY-MM-DD
-      - For amounts, ensure they are numbers (not strings)
-      - If the receipt is not in English, translate the store and item names to English
-      - If the receipt is not a valid receipt, return: {"error": "Not a valid receipt"}
-      - Categorize each item based on these guidelines:
-        * Food: Any edible items, groceries, restaurants, takeout, beverages
-        * Utilities: Electricity, water, gas, internet, phone bills
-        * Shopping: Clothing, electronics, home goods, personal items
-        * Transportation: Gas, public transport, taxis, parking, car maintenance
-        * Entertainment: Movies, games, events, subscriptions, hobbies
-        * Healthcare: Medicine, doctor visits, pharmacy purchases
-        * Others: Anything that doesn't fit the above categories
+      CRITICAL RULES:
+      1. Always return a valid JSON object with all fields, even if some are null
+      2. For monetary values:
+         - Always use numbers (not strings)
+         - Ensure decimal places are correct (usually 2)
+         - If a value is 0, use 0 (not null or empty)
+      
+      3. For dates and times:
+         - Date format: YYYY-MM-DD (e.g., 2025-05-28)
+         - Time format: HH:MM in 24-hour format (e.g., 14:30)
+      
+      4. For items:
+         - Include ALL items from the receipt
+         - Be specific with item names (e.g., "Organic Bananas" not just "Bananas")
+         - Include quantity even if it's 1
+         - Calculate unitPrice if not explicitly shown (price / quantity)
+      
+      5. For categories, use these exact values:
+         - Food: Any edible items, groceries, restaurants, takeout, beverages
+         - Utilities: Electricity, water, gas, internet, phone bills
+         - Shopping: Clothing, electronics, home goods, personal items
+         - Transportation: Gas, public transport, taxis, parking, car maintenance
+         - Entertainment: Movies, games, events, subscriptions, hobbies
+         - Healthcare: Medicine, doctor visits, pharmacy purchases
+         - Others: Anything that doesn't fit the above categories
+      
+      6. If any information is missing or unclear:
+         - Make reasonable estimates where possible
+         - If completely unknown, use null
+         - For amounts that can't be determined, use 0
+      
+      Return ONLY the JSON object, without any markdown code blocks or additional text.
+      If the receipt is not valid or cannot be processed, return: {"error": "Not a valid receipt"}
       `;
 
       console.log('Converting file to base64...');
@@ -151,35 +172,59 @@ class ReceiptProcessingService {
     }
 
     const validCategories: Category[] = ['Food', 'Utilities', 'Shopping', 'Transportation', 'Entertainment', 'Healthcare', 'Others'];
+    
+    // Calculate subtotal if not provided
+    const totalAmount = typeof data.totalAmount === 'number' ? data.totalAmount : 0;
+    const taxAmount = typeof data.taxAmount === 'number' ? data.taxAmount : 0;
+    const discountAmount = typeof data.discountAmount === 'number' ? data.discountAmount : 0;
+    
+    // Format date and time
+    const receiptDate = data.date || new Date().toISOString().split('T')[0];
+    const receiptTime = data.time || null;
 
     // Transform the data to match our Receipt type
     const receipt: Partial<Receipt> = {
-      store_name: data.storeName || 'Unknown Store',
-      total_amount: data.totalAmount || 0,
-      subtotal: data.subtotal || (data.totalAmount - (data.taxAmount || 0) + (data.discountAmount || 0)),
-      tax_amount: data.taxAmount || 0,
-      discount_amount: data.discountAmount || 0,
-      date: data.date || new Date().toISOString().split('T')[0],
+      store_name: data.storeName?.trim() || 'Unknown Store',
+      total_amount: totalAmount,
+      subtotal: data.subtotal || (totalAmount - taxAmount + discountAmount),
+      tax_amount: taxAmount,
+      discount_amount: discountAmount,
+      payment_method: data.paymentMethod?.trim(),
+      receipt_number: data.receiptNumber?.toString(),
+      date: receiptDate,
+      time: receiptTime,
       items: (data.items || []).map((item: any) => {
         // Normalize the category
         let category: Category = 'Others';
-        if (item.category && validCategories.includes(item.category)) {
-          category = item.category as Category;
-        } else if (item.category) {
-          // Try to match the beginning of the category name
-          const matchedCategory = validCategories.find(cat => 
-            item.category.toLowerCase().startsWith(cat.toLowerCase())
-          );
-          if (matchedCategory) {
-            category = matchedCategory;
+        if (item.category) {
+          const normalizedCategory = item.category.trim();
+          if (validCategories.includes(normalizedCategory as Category)) {
+            category = normalizedCategory as Category;
+          } else {
+            // Try to match the beginning of the category name
+            const matchedCategory = validCategories.find(cat => 
+              normalizedCategory.toLowerCase().startsWith(cat.toLowerCase())
+            );
+            if (matchedCategory) {
+              category = matchedCategory;
+            }
           }
         }
         
+        // Calculate unit price if not provided
+        const quantity = Math.max(1, Number(item.quantity) || 1);
+        const price = Number(item.price) || 0;
+        const unitPrice = typeof item.unitPrice === 'number' 
+          ? item.unitPrice 
+          : price / quantity;
+        
         return {
-          name: item.name || 'Unknown Item',
-          price: item.price || 0,
-          quantity: item.quantity || 1,
-          category: category
+          name: item.name?.trim() || 'Unknown Item',
+          price: price,
+          unit_price: unitPrice,
+          quantity: quantity,
+          category: category,
+          description: item.description?.trim()
         };
       }),
     };

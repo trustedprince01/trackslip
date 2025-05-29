@@ -1,9 +1,24 @@
-
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "./ui/skeleton";
+import { Card } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  Calendar, 
+  Target, 
+  ChevronRight, 
+  ShoppingBag,
+  Tag,
+  Percent,
+  Clock,
+  CalendarDays,
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon
+} from "lucide-react";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
-interface InsightCardProps {
+type InsightCardProps = {
   topCategory?: {
     name: string;
     amount: number;
@@ -16,185 +31,186 @@ interface InsightCardProps {
   } | null;
   totalDiscount: number;
   spendingTrend: number;
-  weeklySpendingTrend?: number;
-  averageDailySpend?: number;
+  weeklySpendingTrend: number;
+  averageDailySpend: number;
   subscriptionCosts?: {
     count: number;
     total: number;
   };
-  loading?: boolean;
-}
+  loading: boolean;
+};
 
 export const InsightCard: React.FC<InsightCardProps> = ({
   topCategory,
   topStore,
   totalDiscount,
   spendingTrend,
-  weeklySpendingTrend = 0,
-  averageDailySpend = 0,
+  weeklySpendingTrend,
+  averageDailySpend,
   subscriptionCosts = { count: 0, total: 0 },
-  loading = false
+  loading
 }) => {
-  if (loading) {
-    return (
-      <Card className="bg-gradient-to-br from-trackslip-blue/20 to-trackslip-lightBlue/10 border-gray-800 rounded-xl shadow-lg mb-6 overflow-hidden">
-        <CardContent className="p-4 relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-trackslip-blue/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-          <h3 className="text-sm font-medium text-gray-300 mb-4">Insights</h3>
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-lg bg-gray-800/50" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const navigate = useNavigate();
+  const { formatCurrency } = useCurrency();
+  
+  const isTrendPositive = (value: number) => value >= 0;
+  
+  const insightCards = [
+    {
+      id: 1,
+      title: "Monthly Spending Trend",
+      icon: isTrendPositive(spendingTrend) ? (
+        <TrendingUpIcon className="h-5 w-5 text-green-500" />
+      ) : (
+        <TrendingDownIcon className="h-5 w-5 text-red-500" />
+      ),
+      value: `${Math.abs(spendingTrend)}% ${isTrendPositive(spendingTrend) ? 'increase' : 'decrease'}`,
+      description: "Compared to last month",
+      trend: isTrendPositive(spendingTrend) ? "positive" : "negative",
+      detail: `Your spending ${isTrendPositive(spendingTrend) ? 'increased' : 'decreased'} by ${Math.abs(spendingTrend)}% compared to last month.`
+    },
+    {
+      id: 2,
+      title: "Top Spending Category",
+      icon: <Tag className="h-5 w-5 text-blue-500" />,
+      value: topCategory?.name || "N/A",
+      description: topCategory ? `${topCategory.percentage}% of total` : "No category data",
+      trend: "neutral",
+      detail: topCategory 
+        ? `You've spent ${formatCurrency(topCategory.amount)} on ${topCategory.name.toLowerCase()} this month.`
+        : "No category data available."
+    },
+    {
+      id: 3,
+      title: "Top Store",
+      icon: <ShoppingBag className="h-5 w-5 text-purple-500" />,
+      value: topStore?.name || "N/A",
+      description: topStore ? `${topStore.count} visits` : "No store data",
+      trend: "neutral",
+      detail: topStore 
+        ? `You've spent ${formatCurrency(topStore.amount)} across ${topStore.count} visits.`
+        : "No store data available."
+    },
+    {
+      id: 4,
+      title: "Total Savings",
+      icon: <Percent className="h-5 w-5 text-green-500" />,
+      value: formatCurrency(totalDiscount),
+      description: "Saved from discounts",
+      trend: "positive",
+      detail: `You've saved a total of ${formatCurrency(totalDiscount)} from discounts and promotions.`
+    },
+    {
+      id: 5,
+      title: "Daily Average",
+      icon: <Clock className="h-5 w-5 text-orange-500" />,
+      value: formatCurrency(averageDailySpend),
+      description: "Average daily spending",
+      trend: "neutral",
+      detail: `You spend an average of ${formatCurrency(averageDailySpend)} per day.`
+    },
+    {
+      id: 6,
+      title: "Weekly Trend",
+      icon: isTrendPositive(weeklySpendingTrend) ? (
+        <TrendingUpIcon className="h-5 w-5 text-green-500" />
+      ) : (
+        <TrendingDownIcon className="h-5 w-5 text-red-500" />
+      ),
+      value: `${Math.abs(weeklySpendingTrend)}% ${isTrendPositive(weeklySpendingTrend) ? 'increase' : 'decrease'}`,
+      description: "Compared to last week",
+      trend: isTrendPositive(weeklySpendingTrend) ? "positive" : "negative",
+      detail: `Your spending this week is ${Math.abs(weeklySpendingTrend)}% ${isTrendPositive(weeklySpendingTrend) ? 'higher' : 'lower'} than last week.`
+    },
+    {
+      id: 7,
+      title: "Subscriptions",
+      icon: <CalendarDays className="h-5 w-5 text-indigo-500" />,
+      value: `${subscriptionCosts.count} active`,
+      description: `Total: ${formatCurrency(subscriptionCosts.total)}`,
+      trend: "neutral",
+      detail: "Your subscription costs are being tracked"
+    },
+    {
+      id: 2,
+      title: "Top Spending Category",
+      icon: <DollarSign className="h-5 w-5 text-blue-500" />,
+      value: topCategory?.name || "N/A",
+      description: `${topCategory?.percentage || 0}% of total expenses`,
+      trend: "neutral",
+      detail: `Consider setting a budget limit for ${topCategory?.name || "your top category"} expenses to optimize your spending.`
+    },
+    {
+      id: 3,
+      title: "Budget Alert",
+      icon: <Target className="h-5 w-5 text-purple-500" />,
+      value: `${Math.round(averageDailySpend)} daily average`,
+      description: "Average daily spending",
+      trend: "neutral",
+      detail: `You're spending an average of ${Math.round(averageDailySpend)} daily. Track your daily expenses to stay on budget.`
+    },
+    {
+      id: 4,
+      title: "Savings Goal",
+      icon: <Calendar className="h-5 w-5 text-green-500" />,
+      value: `${subscriptionCosts?.count || 0} subscriptions`,
+      description: "Monthly subscription costs",
+      trend: "positive",
+      detail: `You have ${subscriptionCosts?.count || 0} active subscriptions${subscriptionCosts?.total ? ` costing $${Math.round(subscriptionCosts.total)} monthly` : ''}. Review them for potential savings.`
+    }
+  ];
 
-  const insights = [];
-
-  // Add spending trend insight
-  if (spendingTrend !== 0) {
-    const trendText = spendingTrend > 0 
-      ? `${Math.abs(spendingTrend)}% increase` 
-      : `${Math.abs(spendingTrend)}% decrease`;
-    
-    insights.push(
-      <div key="trend" className="bg-gray-800/50 rounded-lg p-3">
-        <p className="text-xs text-gray-300">
-          <span className={spendingTrend > 0 ? 'text-red-400' : 'text-green-400'}>
-            {trendText}
-          </span> in spending compared to last month
-        </p>
-      </div>
-    );
-  }
-
-  // Add top category insight
-  if (topCategory) {
-    insights.push(
-      <div key="category" className="bg-gray-800/50 rounded-lg p-3">
-        <p className="text-xs text-gray-300">
-          Your top spending category is <span className="text-trackslip-lightBlue">{topCategory.name}</span> 
-          with {topCategory.percentage}% of total expenses
-        </p>
-      </div>
-    );
-  }
-
-  // Add top store insight
-  if (topStore) {
-    insights.push(
-      <div key="store" className="bg-gray-800/50 rounded-lg p-3">
-        <p className="text-xs text-gray-300">
-          You spend the most at <span className="text-trackslip-lightBlue">{topStore.name}</span> 
-          with {topStore.count} receipt {topStore.count !== 1 ? 's' : ''} totaling ${topStore.amount.toFixed(2)}
-        </p>
-      </div>
-    );
-  }
-
-  // Add average daily spend insight
-  if (averageDailySpend > 0) {
-    insights.push(
-      <div key="daily-spend" className="bg-gray-800/50 rounded-lg p-3">
-        <p className="text-xs text-gray-300">
-          You're spending an average of <span className="text-trackslip-lightBlue">${averageDailySpend.toFixed(2)}</span> per day this month
-        </p>
-      </div>
-    );
-  }
-
-  // Add weekly trend insight
-  if (weeklySpendingTrend !== 0) {
-    const trendText = weeklySpendingTrend > 0 
-      ? `${Math.abs(weeklySpendingTrend)}% higher` 
-      : `${Math.abs(weeklySpendingTrend)}% lower`;
-    
-    insights.push(
-      <div key="weekly-trend" className="bg-gray-800/50 rounded-lg p-3">
-        <p className="text-xs text-gray-300">
-          This week's spending is <span className={weeklySpendingTrend > 0 ? 'text-red-400' : 'text-green-400'}>
-            {trendText}
-          </span> than last week
-        </p>
-      </div>
-    );
-  }
-
-  // Add subscription insights
-  if (subscriptionCosts.count > 0) {
-    insights.push(
-      <div key="subscriptions" className="bg-gray-800/50 rounded-lg p-3">
-        <p className="text-xs text-gray-300">
-          You have {subscriptionCosts.count} active subscription{subscriptionCosts.count !== 1 ? 's' : ''} 
-          costing <span className="text-trackslip-lightBlue">${subscriptionCosts.total.toFixed(2)}</span> this month
-        </p>
-      </div>
-    );
-  }
-
-  // Add savings insight if there are any discounts
-  if (totalDiscount > 0) {
-    insights.push(
-      <div key="savings" className="bg-gray-800/50 rounded-lg p-3">
-        <p className="text-xs text-gray-300">
-          You saved <span className="text-green-400">${totalDiscount.toFixed(2)}</span> from discounts and promotions
-        </p>
-      </div>
-    );
-  }
-
-  // If no insights available
-  if (insights.length === 0) {
-    insights.push(
-      <div key="no-data" className="bg-gray-800/50 rounded-lg p-3">
-        <p className="text-xs text-gray-300">
-          Add more receipts to see personalized spending insights
-        </p>
-      </div>
-    );
-  }
+  const visibleInsights = loading ? Array(4).fill({}) : insightCards.slice(0, 4);
 
   return (
-    <Card className="bg-gradient-to-br from-trackslip-blue/20 to-trackslip-lightBlue/10 border-gray-800 rounded-xl shadow-lg mb-6 overflow-hidden">
-      <CardContent className="p-4 relative">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-trackslip-blue/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-sm font-medium text-gray-300">Insights</h3>
-          {insights.length > 0 && (
-            <span className="text-xs text-gray-500 flex items-center">
-              <span className="hidden sm:inline">Swipe to see more</span>
-              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </span>
-          )}
+    <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-xl shadow-lg mb-6">
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Spending Insights</h3>
+          <button 
+            onClick={() => navigate('/insights')}
+            className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 flex items-center"
+          >
+            View All <ChevronRight className="h-3 w-3 ml-1" />
+          </button>
         </div>
-        <div className="relative">
-          <div className="flex space-x-3 pb-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
-            {insights.length > 0 ? (
-              insights.map((insight, index) => (
-                <div key={index} className="flex-shrink-0 w-64 snap-start">
-                  <div className="h-full bg-gray-800/50 hover:bg-gray-800/70 transition-colors rounded-lg p-3">
-                    {insight}
-                  </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          {visibleInsights.map((insight, index) => (
+            <div 
+              key={insight.id || `loading-${index}`}
+              className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200/30 dark:border-gray-700/30 hover:bg-white/70 dark:hover:bg-gray-800/70 transition-colors cursor-pointer"
+              onClick={() => !loading && navigate('/insights')}
+              title={insight.detail}
+            >
+              {loading ? (
+                <div className="animate-pulse space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
                 </div>
-              ))
-            ) : (
-              <div className="bg-gray-800/50 rounded-lg p-3 w-full">
-                <p className="text-xs text-gray-300">
-                  Add more receipts to see personalized spending insights
-                </p>
-              </div>
-            )}
-          </div>
-          {/* Gradient fade effect on the right side */}
-          {insights.length > 0 && (
-            <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-trackslip-blue/30 to-transparent pointer-events-none"></div>
-          )}
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400">{insight.title}</h4>
+                    <div className={
+                      insight.trend === 'positive' ? 'text-green-500' : 
+                      insight.trend === 'negative' ? 'text-red-500' : 
+                      'text-blue-500'
+                    }>
+                      {insight.icon}
+                    </div>
+                  </div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{insight.value}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {insight.description}
+                  </p>
+                </>
+              )}
+            </div>
+          ))}
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 };

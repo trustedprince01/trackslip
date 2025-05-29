@@ -1,96 +1,429 @@
-
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, TrendingUp, TrendingDown, DollarSign, Calendar, PieChart, BarChart3, AlertCircle, Target } from "lucide-react";
+import { 
+  ChevronLeft, 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  Calendar, 
+  PieChart, 
+  BarChart3, 
+  AlertCircle, 
+  Target,
+  ShoppingBag,
+  Tag,
+  Percent,
+  Clock,
+  CalendarDays,
+  CreditCard
+} from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useReceipts } from "@/hooks/useReceipts";
+import { format, subMonths, isThisMonth, isThisWeek, subWeeks, isAfter, isBefore } from "date-fns";
+
+// Define a type for the processed receipt data
+interface ProcessedReceipt {
+  id: string;
+  store_name?: string;
+  date: Date;
+  total_amount: number;
+  items?: Array<{
+    id?: string;
+    name: string;
+    price: number;
+    quantity: number;
+    category?: string;
+  }>;
+  created_at: Date;
+  updated_at: Date;
+  [key: string]: any;
+}
 
 const Insights = () => {
   const navigate = useNavigate();
-  const { currency } = useCurrency();
+  const { formatCurrency } = useCurrency();
+  const { receipts, loading } = useReceipts();
 
   const handleBack = () => {
     navigate("/dashboard");
   };
 
+  // Process receipt data for insights
+  const insights = useMemo(() => {
+    console.log('Receipts data:', receipts);
+    if (!receipts || !receipts.length) {
+      console.log('No receipts data available');
+      return {
+        monthlyTrend: 0,
+        weeklyTrend: 0,
+        topCategory: null,
+        topStore: null,
+        subscriptionCosts: { count: 0, total: 0 },
+        averageDailySpend: 0,
+        currentMonthSpending: 0,
+        paymentMethods: {},
+        timeOfDaySpending: {},
+        recommendations: [{
+          title: 'No Receipts Found',
+          description: 'Start by adding some receipts to see insights',
+          impact: '',
+          priority: 'neutral'
+        }]
+      };
+    }
+
+    // Ensure dates are properly parsed and typed
+    const processedReceipts: ProcessedReceipt[] = receipts.map(receipt => {
+      const processed: ProcessedReceipt = {
+        id: receipt.id || `temp-${Math.random().toString(36).substr(2, 9)}`,
+        store_name: receipt.store_name,
+        date: receipt.date instanceof Date ? receipt.date : new Date(receipt.date),
+        total_amount: receipt.total_amount || 0,
+        items: receipt.items || [],
+        created_at: receipt.created_at instanceof Date 
+          ? receipt.created_at 
+          : new Date(receipt.created_at || Date()),
+        updated_at: receipt.updated_at instanceof Date 
+          ? receipt.updated_at 
+          : new Date(receipt.updated_at || Date()),
+        ...receipt // Spread the rest of the properties to maintain compatibility
+      };
+      return processed;
+    });
+
+    // Calculate monthly spending
+    const monthlySpending = processedReceipts.reduce((acc, receipt) => {
+      if (!receipt.date) return acc;
+      const month = new Date(receipt.date).toLocaleString('default', { month: 'short' });
+      acc[month] = (acc[month] || 0) + (receipt.total_amount || 0);
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Calculate monthly trend (comparing current month to previous month)
+    const months = Object.keys(monthlySpending).sort();
+    let monthlyTrend = 0;
+    if (months.length >= 2) {
+      const currentMonth = months[months.length - 1];
+      const prevMonth = months[months.length - 2];
+      const currentTotal = monthlySpending[currentMonth];
+      const prevTotal = monthlySpending[prevMonth];
+      monthlyTrend = prevTotal ? Math.round(((currentTotal - prevTotal) / prevTotal) * 100) : 0;
+    }
+    
+    // Get current date for calculations
+    const currentDate = new Date();
+    const currentMonthName = currentDate.toLocaleString('default', { month: 'short' });
+    const currentMonthSpending = monthlySpending[currentMonthName] || 0;
+
+    // Calculate weekly spending trend
+    const thisWeekSpending = processedReceipts
+      .filter(receipt => {
+        try {
+          return isThisWeek(receipt.date);
+        } catch (e) {
+          console.error('Error processing this week date:', e);
+          return false;
+        }
+      })
+      .reduce((sum, receipt) => sum + receipt.total_amount, 0);
+      
+    const lastWeekStart = subWeeks(new Date(), 1);
+    const lastWeekEnd = new Date();
+    const lastWeekSpending = processedReceipts
+      .filter(receipt => {
+        try {
+          return receipt.date >= lastWeekStart && receipt.date <= lastWeekEnd;
+        } catch (e) {
+          console.error('Error filtering last week:', e);
+          return false;
+        }
+      })
+      .reduce((sum, receipt) => sum + receipt.total_amount, 0);
+      
+    const weeklyTrend = lastWeekSpending > 0
+      ? Math.round(((thisWeekSpending - lastWeekSpending) / lastWeekSpending) * 100)
+      : 0;
+
+    // Calculate category totals and payment methods
+    const categoryTotals = processedReceipts.reduce<Record<string, number>>((acc, receipt) => {
+      if (receipt.items && receipt.items.length > 0) {
+        receipt.items.forEach(item => {
+          const category = item.category || 'Uncategorized';
+          acc[category] = (acc[category] || 0) + (item.price * (item.quantity || 1));
+        });
+      }
+      return acc;
+    }, {});
+    
+    const topCategory = Object.entries(categoryTotals)
+      .sort((a, b) => b[1] - a[1])[0];
+    
+    const totalSpent = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
+    const topCategoryPercentage = Math.round((topCategory?.[1] / totalSpent) * 100) || 0;
+    
+    // Calculate payment method breakdown
+    const paymentMethods = processedReceipts.reduce<Record<string, number>>((acc, receipt) => {
+      const method = receipt.payment_method || 'Unknown';
+      acc[method] = (acc[method] || 0) + (receipt.total_amount || 0);
+      return acc;
+    }, {});
+    
+    // Calculate time of day spending
+    const timeOfDaySpending = processedReceipts.reduce<Record<string, number>>((acc, receipt) => {
+      if (!receipt.time) return acc;
+      
+      try {
+        const hour = parseInt(receipt.time.split(':')[0]);
+        let timeOfDay = 'Evening';
+        
+        if (hour < 12) timeOfDay = 'Morning';
+        else if (hour < 17) timeOfDay = 'Afternoon';
+        
+        acc[timeOfDay] = (acc[timeOfDay] || 0) + (receipt.total_amount || 0);
+      } catch (e) {
+        console.error('Error processing time:', receipt.time, e);
+      }
+      
+      return acc;
+    }, {});
+
+    // Calculate top store
+    const storeTotals = processedReceipts.reduce<Record<string, number>>((acc, receipt) => {
+      const storeName = receipt.store_name || 'Unknown Store';
+      acc[storeName] = (acc[storeName] || 0) + receipt.total_amount;
+      return acc;
+    }, {});
+    
+    const topStore = Object.entries(storeTotals)
+      .sort((a, b) => b[1] - a[1])[0];
+    
+    const topStoreVisitCount = processedReceipts
+      .filter(receipt => receipt.store_name === topStore?.[0])
+      .length;
+
+    // Calculate subscription costs
+    const subscriptions = processedReceipts.filter(receipt => {
+      const storeName = (receipt.store_name || '').toLowerCase();
+      return (
+        storeName.includes('netflix') || 
+        storeName.includes('spotify') ||
+        storeName.includes('premium') ||
+        storeName.includes('subscription') ||
+        (receipt.items?.some(item => 
+          (item.category || '').toLowerCase() === 'subscription'
+        ))
+      );
+    });
+    
+    const subscriptionCosts = {
+      count: new Set(subscriptions.map(sub => sub.store_name)).size,
+      total: subscriptions.reduce((sum, sub) => sum + sub.total_amount, 0)
+    };
+
+    // Calculate daily average
+    const daysInMonth = new Date(
+      currentDate.getFullYear(), 
+      currentDate.getMonth() + 1, 
+      0
+    ).getDate();
+    const averageDailySpend = currentMonthSpending / daysInMonth;
+
+    // Generate recommendations
+    const recommendations = [];
+    
+    if (topCategory && topCategory[1] > (totalSpent * 0.4)) {
+      recommendations.push({
+        title: `Reduce ${topCategory[0]} Spending`,
+        description: `Your ${topCategory[0].toLowerCase()} spending is ${topCategoryPercentage}% of total expenses`,
+        impact: `Potential savings: ${formatCurrency(topCategory[1] * 0.2)}/month`,
+        priority: "high"
+      });
+    }
+    
+    if (subscriptionCosts.count > 0) {
+      recommendations.push({
+        title: "Review Subscriptions",
+        description: `You have ${subscriptionCosts.count} active subscriptions`,
+        impact: `Monthly cost: ${formatCurrency(subscriptionCosts.total)}`,
+        priority: "medium"
+      });
+    }
+    
+    if (monthlyTrend > 10) {
+      recommendations.push({
+        title: "Spending Alert",
+        description: `Your spending is up ${monthlyTrend}% from last month`,
+        impact: "Consider reviewing your budget",
+        priority: "high"
+      });
+    } else if (monthlyTrend < -5) {
+      recommendations.push({
+        title: "Great Job!",
+        description: `You've reduced spending by ${Math.abs(monthlyTrend)}% from last month`,
+        impact: "Keep up the good work!",
+        priority: "low"
+      });
+    }
+
+    return {
+      monthlyTrend,
+      weeklyTrend,
+      topCategory: topCategory ? {
+        name: topCategory[0],
+        amount: topCategory[1],
+        percentage: topCategoryPercentage
+      } : null,
+      topStore: topStore ? {
+        name: topStore[0],
+        amount: topStore[1],
+        count: topStoreVisitCount
+      } : null,
+      subscriptionCosts,
+      averageDailySpend,
+      currentMonthSpending,
+      paymentMethods,
+      timeOfDaySpending,
+      recommendations: recommendations.length > 0 
+        ? recommendations 
+        : [{
+            title: "No Recommendations",
+            description: "Your spending patterns look good!",
+            impact: "Check back later for more insights",
+            priority: "neutral"
+          }]
+    };
+  }, [receipts]);
+
+  const isTrendPositive = (value: number) => value >= 0;
+  const getTrendColor = (value: number) => 
+    isTrendPositive(value) ? "text-green-500" : "text-red-500";
+  const getTrendIcon = (value: number) =>
+    isTrendPositive(value) ? 
+      <TrendingUp className="h-5 w-5 text-green-500" /> : 
+      <TrendingDown className="h-5 w-5 text-red-500" />;
+
   const insightCards = [
     {
       id: 1,
       title: "Monthly Spending Trend",
-      icon: <TrendingUp className="h-5 w-5 text-green-500" />,
-      value: "12% decrease",
-      description: "Your spending decreased compared to last month",
-      trend: "positive",
-      detail: "You saved an average of ₦15,000 this month by reducing dining out expenses."
+      icon: getTrendIcon(insights?.monthlyTrend || 0),
+      value: `${Math.abs(insights?.monthlyTrend || 0)}%`,
+      description: insights?.monthlyTrend !== undefined 
+        ? `${isTrendPositive(insights.monthlyTrend) ? 'Increase' : 'Decrease'} from last month` 
+        : "No data",
+      trend: isTrendPositive(insights?.monthlyTrend || 0) ? "positive" : "negative",
+      detail: insights?.monthlyTrend !== undefined
+        ? `Your spending ${isTrendPositive(insights.monthlyTrend) ? 'increased' : 'decreased'} by ${Math.abs(insights.monthlyTrend)}% compared to last month.`
+        : "Not enough data to calculate monthly trend."
     },
     {
       id: 2,
       title: "Top Spending Category",
-      icon: <PieChart className="h-5 w-5 text-blue-500" />,
-      value: "Food & Dining",
-      description: "45% of total expenses",
+      icon: <Tag className="h-5 w-5 text-blue-500" />,
+      value: insights?.topCategory?.name || "N/A",
+      description: insights?.topCategory 
+        ? `${insights.topCategory.percentage}% of total` 
+        : "No category data",
       trend: "neutral",
-      detail: "Consider setting a budget limit for dining expenses to optimize your spending."
+      detail: insights?.topCategory
+        ? `You've spent ${formatCurrency(insights.topCategory.amount)} on ${insights.topCategory.name.toLowerCase()} this month.`
+        : "No category data available."
     },
     {
       id: 3,
-      title: "Budget Alert",
-      icon: <AlertCircle className="h-5 w-5 text-red-500" />,
-      value: "85% used",
-      description: "Transportation budget almost exceeded",
-      trend: "negative",
-      detail: "You've used 85% of your transportation budget with 10 days remaining this month."
+      title: "Top Payment Method",
+      icon: <CreditCard className="h-5 w-5 text-purple-500" />,
+      value: insights?.paymentMethods ? Object.entries(insights.paymentMethods)
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A" : "N/A",
+      description: insights?.paymentMethods ? `${Object.keys(insights.paymentMethods).length} methods used` : "No data",
+      trend: "neutral",
+      detail: insights?.paymentMethods 
+        ? `Your most used payment method is ${Object.entries(insights.paymentMethods)
+            .sort((a, b) => b[1] - a[1])[0]?.[0] || 'unknown'}.`
+        : "No payment method data available."
     },
     {
       id: 4,
-      title: "Savings Goal",
-      icon: <Target className="h-5 w-5 text-purple-500" />,
-      value: "68% complete",
-      description: "Monthly savings target progress",
-      trend: "positive",
-      detail: "You're on track to meet your savings goal of ₦50,000 this month."
+      title: "Peak Spending Time",
+      icon: <Clock className="h-5 w-5 text-orange-500" />,
+      value: insights?.timeOfDaySpending ? Object.entries(insights.timeOfDaySpending)
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A" : "N/A",
+      description: insights?.timeOfDaySpending ? `Out of ${Object.keys(insights.timeOfDaySpending).length} time periods` : "No data",
+      trend: "neutral",
+      detail: insights?.timeOfDaySpending && Object.keys(insights.timeOfDaySpending).length > 0
+        ? `You spend the most during ${Object.entries(insights.timeOfDaySpending)
+            .sort((a, b) => b[1] - a[1])[0]?.[0]?.toLowerCase()} hours.`
+        : "Not enough data to determine peak spending time."
     },
     {
       id: 5,
-      title: "Weekly Average",
-      icon: <BarChart3 className="h-5 w-5 text-orange-500" />,
-      value: `${currency}8,750`,
-      description: "Average weekly spending",
+      title: "Total Monthly Spend",
+      icon: <DollarSign className="h-5 w-5 text-green-500" />,
+      value: insights?.currentMonthSpending ? formatCurrency(insights.currentMonthSpending) : "N/A",
+      description: "Current month's total spending",
       trend: "neutral",
-      detail: "Your weekly spending is consistent with your monthly budget plan."
+      detail: insights?.currentMonthSpending !== undefined
+        ? `You've spent a total of ${formatCurrency(insights.currentMonthSpending)} this month.`
+        : "No spending data available for this month."
     },
     {
       id: 6,
-      title: "Best Saving Day",
-      icon: <Calendar className="h-5 w-5 text-teal-500" />,
-      value: "Sundays",
-      description: "Lowest spending day of the week",
-      trend: "positive",
-      detail: "You tend to spend 60% less on Sundays compared to other days."
+      title: "Daily Average",
+      icon: <Calendar className="h-5 w-5 text-pink-500" />,
+      value: insights?.averageDailySpend ? formatCurrency(insights.averageDailySpend) : "N/A",
+      description: "Average daily spending this month",
+      trend: "neutral",
+      detail: insights?.averageDailySpend !== undefined
+        ? `You spend an average of ${formatCurrency(insights.averageDailySpend)} per day.`
+        : "Not enough data to calculate daily average."
+    },
+    {
+      id: 7,
+      title: "Top Store",
+      icon: <ShoppingBag className="h-5 w-5 text-teal-500" />,
+      value: insights?.topStore?.name || "N/A",
+      description: insights?.topStore ? `${insights.topStore.count} visits` : "No store data",
+      trend: "neutral",
+      detail: insights?.topStore
+        ? `You've spent ${formatCurrency(insights.topStore.amount)} across ${insights.topStore.count} visits.`
+        : "No store data available."
+    },
+    {
+      id: 8,
+      title: "Payment Methods",
+      icon: <CreditCard className="h-5 w-5 text-indigo-500" />,
+      value: insights?.paymentMethods ? `${Object.keys(insights.paymentMethods).length} used` : "N/A",
+      description: insights?.paymentMethods 
+        ? `Total spent: ${formatCurrency(Object.values(insights.paymentMethods).reduce((a, b) => a + b, 0))}`
+        : "No payment data",
+      trend: "neutral",
+      detail: insights?.paymentMethods
+        ? `You've used ${Object.keys(insights.paymentMethods).length} different payment methods.`
+        : "No payment method data available."
+    },
+    {
+      id: 9,
+      title: "Subscriptions",
+      icon: <CalendarDays className="h-5 w-5 text-yellow-500" />,
+      value: insights?.subscriptionCosts ? `${insights.subscriptionCosts.count} active` : "N/A",
+      description: insights?.subscriptionCosts 
+        ? `Total: ${formatCurrency(insights.subscriptionCosts.total)}` 
+        : "No subscription data",
+      trend: "neutral",
+      detail: insights?.subscriptionCosts
+        ? `You have ${insights.subscriptionCosts.count} active subscriptions costing ${formatCurrency(insights.subscriptionCosts.total)} in total.`
+        : "No subscription data available."
     }
   ];
 
-  const recommendations = [
-    {
-      title: "Optimize Food Spending",
-      description: "Consider meal planning to reduce dining out expenses by 20%",
-      impact: "Potential savings: ₦12,000/month",
-      priority: "high"
-    },
-    {
-      title: "Set Transportation Budget",
-      description: "Create a monthly limit for transportation to avoid overspending",
-      impact: "Better budget control",
-      priority: "medium"
-    },
-    {
-      title: "Increase Savings Rate",
-      description: "You could increase savings by 15% by reducing entertainment expenses",
-      impact: "Additional savings: ₦7,500/month",
-      priority: "low"
-    }
-  ];
+  const recommendations = insights?.recommendations || [{
+    title: "Loading recommendations...",
+    description: "Analyzing your spending patterns",
+    impact: "",
+    priority: "neutral"
+  }];
 
   return (
     <div className="min-h-screen w-full flex justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black transition-colors duration-300">
@@ -119,7 +452,7 @@ const Insights = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm opacity-90">This Month</p>
-                    <p className="text-2xl font-bold">{currency}45,280</p>
+                    <p className="text-2xl font-bold">{formatCurrency(insights?.currentMonthSpending || 0)}</p>
                   </div>
                   <DollarSign className="h-8 w-8 opacity-80" />
                 </div>
@@ -130,7 +463,7 @@ const Insights = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm opacity-90">Saved</p>
-                    <p className="text-2xl font-bold">{currency}15,720</p>
+                    <p className="text-2xl font-bold">{formatCurrency(insights?.subscriptionCosts?.total ? (insights.currentMonthSpending - insights.subscriptionCosts.total) : 0)}</p>
                   </div>
                   <TrendingUp className="h-8 w-8 opacity-80" />
                 </div>

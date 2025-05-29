@@ -14,21 +14,28 @@ export const useReceipts = () => {
 
   // Fetch all receipts
   const fetchReceipts = useCallback(async () => {
-    if (!userId) return [];
+    console.log('[useReceipts] Fetching receipts for user:', userId);
+    if (!userId) {
+      console.log('[useReceipts] No user ID, returning empty array');
+      return [];
+    }
     
     setLoading(true);
     setError(null);
     
     try {
+      console.log('[useReceipts] Calling receiptService.getReceipts');
       const data = await receiptService.getReceipts(userId);
+      console.log('[useReceipts] Received data:', data);
       setReceipts(data);
       return data;
     } catch (err) {
-      console.error('Error fetching receipts:', err);
+      console.error('[useReceipts] Error fetching receipts:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch receipts'));
       return [];
     } finally {
       setLoading(false);
+      console.log('[useReceipts] Fetch completed');
     }
   }, [userId]);
 
@@ -45,16 +52,26 @@ export const useReceipts = () => {
       // Process the receipt image
       const { receipt, imageUrl } = await receiptProcessingService.processReceipt(file, userId);
       
-      // Create the receipt object
+      // Create the receipt object with all fields
       const newReceipt: ReceiptInsert = {
         user_id: userId,
         store_name: receipt.store_name || 'Unknown Store',
         date: receipt.date || new Date().toISOString(),
+        time: receipt.time || null,
         total_amount: receipt.total_amount || 0,
-        subtotal: receipt.subtotal || receipt.total_amount || 0, // Use subtotal if available, otherwise use total_amount
+        subtotal: receipt.subtotal || receipt.total_amount || 0,
         tax_amount: receipt.tax_amount || 0,
         discount_amount: receipt.discount_amount || 0,
-        items: receipt.items || [],
+        payment_method: receipt.payment_method || null,
+        receipt_number: receipt.receipt_number || null,
+        items: (receipt.items || []).map(item => ({
+          name: item.name,
+          price: item.price,
+          unit_price: item.unit_price || (item.price / (item.quantity || 1)),
+          quantity: item.quantity || 1,
+          category: item.category || 'Others',
+          description: item.description || ''
+        })),
         image_url: imageUrl,
       };
 
