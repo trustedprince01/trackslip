@@ -54,7 +54,27 @@ const Insights = () => {
   };
 
   const handleApplyRecommendation = (recommendation: any) => {
-    setSelectedRecommendation(recommendation);
+    // Filter receipts for the selected category
+    const categoryReceipts = receipts.filter(
+      receipt => receipt.category === recommendation.category
+    );
+    
+    // Calculate total amount for the category
+    const totalAmount = categoryReceipts.reduce(
+      (sum, receipt) => sum + (receipt.total_amount || 0), 0
+    );
+
+    // Calculate total spent across all receipts
+    const totalSpent = receipts.reduce(
+      (sum, receipt) => sum + (receipt.total_amount || 0), 0
+    );
+
+    setSelectedRecommendation({
+      ...recommendation,
+      amount: totalAmount,
+      percentage: totalSpent > 0 ? (totalAmount / totalSpent) * 100 : 0
+    });
+    
     setIsModalOpen(true);
   };
 
@@ -64,7 +84,7 @@ const Insights = () => {
   };
 
   // Process receipt data for insights
-  const insights = useMemo(() => {
+  const { recommendations: insightsRecommendations, ...insights } = useMemo(() => {
     console.log('Receipts data:', receipts);
     if (!receipts || !receipts.length) {
       console.log('No receipts data available');
@@ -80,7 +100,7 @@ const Insights = () => {
         timeOfDaySpending: {},
         recommendations: [{
           title: 'No Receipts Found',
-          description: 'Start by adding some receipts to see insights',
+          description: 'Start by adding some receipts to see AI-powered insights',
           impact: '',
           priority: 'neutral'
         }]
@@ -431,12 +451,45 @@ const Insights = () => {
     }
   ];
 
-  const recommendations = insights?.recommendations || [{
-    title: "Loading recommendations...",
-    description: "Analyzing your spending patterns",
-    impact: "",
-    priority: "neutral"
-  }];
+  // Generate AI-powered recommendations
+  const recommendations = useMemo(() => {
+    if (!insights.topCategory) {
+      return [{
+        title: "Analyzing your spending...",
+        description: "We're processing your receipts to provide personalized recommendations",
+        impact: "",
+        priority: "neutral"
+      }];
+    }
+
+    return [
+      {
+        title: `Optimize ${insights.topCategory.name} Spending`,
+        description: `You've spent ${formatCurrency(insights.topCategory.amount)} on ${insights.topCategory.name.toLowerCase()} this month`,
+        impact: `Potential savings: ${formatCurrency(insights.topCategory.amount * 0.15)}/month`,
+        priority: "high",
+        category: insights.topCategory.name,
+        amount: insights.topCategory.amount,
+        percentage: insights.topCategory.percentage
+      },
+      ...(insights.subscriptionCosts.count > 0 ? [{
+        title: "Review Subscriptions",
+        description: `You have ${insights.subscriptionCosts.count} active subscriptions`,
+        impact: `Monthly cost: ${formatCurrency(insights.subscriptionCosts.total)}`,
+        priority: "medium",
+        category: "Subscriptions"
+      }] : []),
+      {
+        title: "Weekly Spending Trend",
+        description: insights.weeklyTrend > 0 
+          ? `Your spending is up ${insights.weeklyTrend}% this week` 
+          : `Your spending is down ${Math.abs(insights.weeklyTrend)}% this week`,
+        impact: insights.weeklyTrend > 0 ? "Consider reviewing your budget" : "Great job!",
+        priority: insights.weeklyTrend > 10 ? "high" : "low",
+        category: "Overall Spending"
+      }
+    ];
+  }, [insights]);
 
   return (
     <div className="min-h-screen w-full flex justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black transition-colors duration-300">
@@ -575,8 +628,9 @@ const Insights = () => {
       {/* Smart Recommendation Modal */}
       <SmartRecommendationModal
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={() => setIsModalOpen(false)}
         recommendation={selectedRecommendation}
+        receipts={receipts}
       />
     </div>
   );

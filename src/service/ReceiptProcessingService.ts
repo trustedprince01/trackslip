@@ -165,13 +165,144 @@ class ReceiptProcessingService {
     }
   }
 
+  
+  private getSpecificCategory(itemName: string, storeName: string): Category {
+    const lowerItem = itemName.toLowerCase();
+    const lowerStore = storeName.toLowerCase();
+
+    // Store-specific overrides
+    if (lowerStore.includes('fuel station') || lowerStore.includes('gas station')) {
+      // Only categorize fuel/gas items as Transportation
+      if (lowerItem.includes('fuel') || lowerItem.includes('gas') || 
+          lowerItem.includes('petrol') || lowerItem.includes('diesel')) {
+        return 'Transportation';
+      }
+      // Common convenience store items
+      if (lowerItem.includes('snack') || lowerItem.includes('drink') || 
+          lowerItem.includes('food') || lowerItem.includes('water') ||
+          lowerItem.includes('chips') || lowerItem.includes('soda') ||
+          lowerItem.includes('candy') || lowerItem.includes('chocolate')) {
+        return 'Groceries';
+      }
+    }
+
+    // Define category mappings
+    const categoryMappings = [
+      // Groceries
+      {
+        keywords: ['grocery', 'supermarket', 'market', 'food mart', 'convenience store', 
+                  'deli', 'butcher', 'bakery', 'produce', 'food', 'snack', 'drink', 'beverage'],
+        category: 'Groceries' as const
+      },
+      // Dining
+      {
+        keywords: ['restaurant', 'cafe', 'bistro', 'eatery', 'grill', 'pizzeria', 'sushi', 
+                  'bar & grill', 'diner', 'steakhouse', 'tavern', 'pub', 'bar', 
+                  'coffee shop', 'breakfast', 'brunch', 'lunch', 'dinner', 'food court', 
+                  'fast food', 'takeout', 'delivery'],
+        category: 'Dining' as const
+      },
+      // Transportation
+      {
+        keywords: ['fuel', 'gas', 'petrol', 'diesel', 'charging', 'public transport', 
+                  'bus', 'train', 'subway', 'metro', 'taxi', 'uber', 'lyft', 'parking', 
+                  'toll', 'car wash', 'auto repair', 'tire', 'oil change', 'maintenance'],
+        category: 'Transportation' as const,
+        condition: (item: string, store: string) => {
+          const lowerStore = store.toLowerCase();
+          // Don't categorize as transportation if it's clearly a grocery item from a gas station
+          const groceryKeywords = ['grocery', 'market', 'convenience', 'food', 'snack', 'drink'];
+          return !groceryKeywords.some(keyword => lowerItem.includes(keyword));
+        }
+      },
+      // Shopping
+      {
+        keywords: ['store', 'shop', 'boutique', 'outlet', 'mall', 'department', 
+                  'clothing', 'apparel', 'footwear', 'electronics', 'gadget', 
+                  'appliance', 'home goods', 'furniture', 'decor', 'hardware', 'diy'],
+        category: 'Shopping' as const
+      },
+      // Bills & Utilities
+      {
+        keywords: ['bill', 'payment', 'utility', 'electric', 'water', 'gas bill', 
+                  'internet', 'phone', 'mobile', 'cable', 'tv', 'streaming', 
+                  'subscription', 'membership', 'insurance', 'mortgage', 'rent', 'loan'],
+        category: 'Bills' as const
+      },
+      // Health
+      {
+        keywords: ['pharmacy', 'drugstore', 'medical', 'dental', 'doctor', 'hospital', 
+                  'clinic', 'healthcare', 'wellness', 'fitness', 'gym', 'vitamin', 
+                  'supplement', 'optical', 'hearing', 'medicine', 'prescription'],
+        category: 'Health' as const
+      },
+      // Entertainment
+      {
+        keywords: ['movie', 'cinema', 'theater', 'concert', 'event', 'ticket', 'game', 
+                  'hobby', 'sport', 'fitness', 'music', 'book', 'magazine', 'newspaper', 
+                  'streaming', 'gaming', 'arcade', 'amusement', 'park', 'museum'],
+        category: 'Entertainment' as const
+      },
+      // Personal Care
+      {
+        keywords: ['salon', 'barber', 'spa', 'massage', 'beauty', 'hair', 'nails', 
+                  'skincare', 'cosmetic', 'grooming', 'wellness', 'tattoo', 'piercing',
+                  'toiletries', 'hygiene'],
+        category: 'Personal Care' as const
+      },
+      // Education
+      {
+        keywords: ['school', 'university', 'college', 'course', 'class', 'training', 
+                  'workshop', 'seminar', 'bookstore', 'stationery', 'supplies', 'tuition',
+                  'textbook', 'education'],
+        category: 'Education' as const
+      },
+      // Gifts & Donations
+      {
+        keywords: ['gift', 'present', 'donation', 'charity', 'fundraiser', 'nonprofit', 
+                  'ngo', 'church', 'temple', 'mosque', 'synagogue', 'place of worship'],
+        category: 'Gifts' as const
+      },
+      // Home
+      {
+        keywords: ['home', 'garden', 'furniture', 'appliance', 'renovation', 'repair', 
+                  'maintenance', 'cleaning', 'lawn', 'landscaping', 'pest control', 
+                  'security', 'houseware', 'kitchen', 'bath', 'bedding'],
+        category: 'Home' as const
+      }
+    ];
+
+    // Check each category mapping
+    for (const { keywords, category, condition } of categoryMappings) {
+      const matchesKeyword = keywords.some(keyword => 
+        lowerItem.includes(keyword) || 
+        lowerStore.includes(keyword)
+      );
+      
+      const conditionPasses = condition ? condition(itemName, storeName) : true;
+      
+      if (matchesKeyword && conditionPasses) {
+        return category;
+      }
+    }
+
+    return 'Others';
+  }
+
+ 
+
   private async validateAndTransformReceiptData(data: any): Promise<Partial<Receipt>> {
     // Basic validation
     if (data.error) {
       throw new Error(data.error);
     }
 
-    const validCategories: Category[] = ['Food', 'Utilities', 'Shopping', 'Transportation', 'Entertainment', 'Healthcare', 'Others'];
+    // All valid categories from the Receipt type
+    const validCategories: Category[] = [
+      'Groceries', 'Dining', 'Transportation', 'Shopping', 'Bills',
+      'Health', 'Entertainment', 'Travel', 'Education', 'Home',
+      'Personal Care', 'Gifts', 'Others'
+    ];
     
     // Calculate subtotal if not provided
     const totalAmount = typeof data.totalAmount === 'number' ? data.totalAmount : 0;
@@ -194,7 +325,7 @@ class ReceiptProcessingService {
       date: receiptDate,
       time: receiptTime,
       items: (data.items || []).map((item: any) => {
-        // Normalize the category
+        // First, try to use the provided category if it's valid
         let category: Category = 'Others';
         if (item.category) {
           const normalizedCategory = item.category.trim();
@@ -207,8 +338,14 @@ class ReceiptProcessingService {
             );
             if (matchedCategory) {
               category = matchedCategory;
+            } else {
+              // If the provided category isn't valid, try to determine a better one
+              category = this.getSpecificCategory(item.name || '', data.storeName || '');
             }
           }
+        } else {
+          // If no category is provided, determine it based on item name and store
+          category = this.getSpecificCategory(item.name || '', data.storeName || '');
         }
         
         // Calculate unit price if not provided

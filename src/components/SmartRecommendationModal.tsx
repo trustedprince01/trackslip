@@ -1,22 +1,21 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { 
   X, 
   DollarSign, 
-  RefreshCw, 
   BarChart3, 
   Target, 
   TrendingUp, 
-  TrendingDown, 
-  Info,
-  Clock,
-  AlertCircle
+  Loader2,
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { getAIRecommendation, AIRecommendation } from "@/services/RecommendationService";
 
 interface SmartRecommendationModalProps {
   isOpen: boolean;
@@ -25,147 +24,157 @@ interface SmartRecommendationModalProps {
     title: string;
     description: string;
     impact: string;
-    priority: string;
+    priority: 'high' | 'medium' | 'low' | 'neutral';
     category?: string;
+    amount?: number;
+    percentage?: number;
   } | null;
+  receipts?: any[];
 }
 
 export const SmartRecommendationModal: React.FC<SmartRecommendationModalProps> = ({
   isOpen,
   onClose,
-  recommendation
+  recommendation,
+  receipts = []
 }) => {
+  const [aiRecommendation, setAiRecommendation] = useState<AIRecommendation | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { formatCurrency } = useCurrency();
-  const [selectedAction, setSelectedAction] = useState<string | null>(null);
 
-  if (!recommendation) return null;
+  useEffect(() => {
+    const fetchRecommendation = async () => {
+      if (!isOpen || !recommendation?.category) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Filter receipts by the selected category
+        const categoryReceipts = receipts.filter(receipt => 
+          receipt.category === recommendation.category ||
+          receipt.items?.some((item: any) => item.category === recommendation.category)
+        );
 
-  // Mock data based on the recommendation category
-  const getCategoryData = (title: string) => {
-    const categoryName = title.includes("Food") ? "Food & Dining" :
-                        title.includes("Transportation") ? "Transportation" :
-                        title.includes("Subscription") ? "Subscriptions" :
-                        title.includes("Spending") ? "General Spending" : "General";
+        console.log('Filtered receipts for category:', {
+          category: recommendation.category,
+          receiptCount: categoryReceipts.length,
+          totalReceipts: receipts.length,
+          sampleReceipt: categoryReceipts[0] // Log first receipt for debugging
+        });
 
-    const mockData = {
-      "Food & Dining": {
-        currentSpending: 28400,
-        percentage: 35,
-        comparison: "25% higher than similar users",
-        trend: "up",
-        subcategories: [
-          { name: "Restaurants", amount: 15200, percentage: 54, trend: "up" },
-          { name: "Groceries", amount: 8900, percentage: 31, trend: "down" },
-          { name: "Delivery", amount: 4300, percentage: 15, trend: "up" }
-        ],
-        suggestions: [
-          "Cook at home 3 more days per week to save ₦8,000/month",
-          "Your delivery orders peak on weekends - try meal prep",
-          "Switch to local markets for groceries to save 20%"
-        ]
-      },
-      "Transportation": {
-        currentSpending: 22100,
-        percentage: 28,
-        comparison: "15% higher than average",
-        trend: "up",
-        subcategories: [
-          { name: "Ride-hailing", amount: 12500, percentage: 57, trend: "up" },
-          { name: "Fuel", amount: 6800, percentage: 31, trend: "down" },
-          { name: "Public Transport", amount: 2800, percentage: 12, trend: "stable" }
-        ],
-        suggestions: [
-          "Use public transport 2x/week to save ₦3,500/month",
-          "Your Uber rides peak on Fridays - consider carpooling",
-          "Plan trips to reduce fuel consumption by 15%"
-        ]
-      },
-      "Subscriptions": {
-        currentSpending: 12000,
-        percentage: 15,
-        comparison: "Similar to average users",
-        trend: "stable",
-        subcategories: [
-          { name: "Streaming", amount: 4500, percentage: 38, trend: "stable" },
-          { name: "Software", amount: 4200, percentage: 35, trend: "up" },
-          { name: "Other", amount: 3300, percentage: 27, trend: "down" }
-        ],
-        suggestions: [
-          "Review unused subscriptions - potential ₦2,000/month savings",
-          "Bundle streaming services for better rates",
-          "Cancel duplicate services you're not using"
-        ]
-      },
-      "General Spending": {
-        currentSpending: 78500,
-        percentage: 100,
-        comparison: "Budget on track",
-        trend: "up",
-        subcategories: [
-          { name: "Essential", amount: 45000, percentage: 57, trend: "stable" },
-          { name: "Discretionary", amount: 23500, percentage: 30, trend: "up" },
-          { name: "Savings", amount: 10000, percentage: 13, trend: "down" }
-        ],
-        suggestions: [
-          "Increase savings rate to 20% of income",
-          "Review discretionary spending for optimization",
-          "Set up automatic transfers to savings"
-        ]
+        if (categoryReceipts.length === 0) {
+          throw new Error(`No receipt data found for category: ${recommendation.category}`);
+        }
+        
+        const result = await getAIRecommendation(
+          categoryReceipts,
+          recommendation.category,
+          {
+            amount: recommendation.amount || 0,
+            percentage: recommendation.percentage || 0,
+            transactionCount: categoryReceipts.length
+          },
+          formatCurrency
+        );
+        
+        if (!result) {
+          throw new Error('No recommendations generated');
+        }
+        
+        setAiRecommendation(result);
+      } catch (err) {
+        console.error('Error fetching AI recommendation:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load recommendations. Please try again later.');
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    return mockData[categoryName as keyof typeof mockData] || mockData["General Spending"];
+    fetchRecommendation();
+  }, [isOpen, recommendation, receipts]);
+
+  if (!recommendation) return null;
+
+  const handleRetry = () => {
+    setAiRecommendation(null);
+    setError(null);
   };
 
-  const data = getCategoryData(recommendation.title);
-  const categoryName = recommendation.title.includes("Food") ? "Food & Dining" :
-                      recommendation.title.includes("Transportation") ? "Transportation" :
-                      recommendation.title.includes("Subscription") ? "Subscriptions" : "General Spending";
+  // Format the amount with currency
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
 
-  const actionCards = [
-    {
-      id: "budget",
-      title: "Set Budget",
-      icon: <DollarSign className="h-5 w-5" />,
-      description: "Create spending limit",
-      color: "bg-blue-500"
-    },
-    {
-      id: "alternatives",
-      title: "Find Alternatives",
-      icon: <RefreshCw className="h-5 w-5" />,
-      description: "Discover cheaper options",
-      color: "bg-green-500"
-    },
-    {
-      id: "breakdown",
-      title: "View Breakdown",
-      icon: <BarChart3 className="h-5 w-5" />,
-      description: "Detailed analysis",
-      color: "bg-purple-500"
-    },
-    {
-      id: "goal",
-      title: "Set Goal",
-      icon: <Target className="h-5 w-5" />,
-      description: "Define savings target",
-      color: "bg-orange-500"
-    }
-  ];
+  // Function to format the AI response with proper styling
+  const formatAIContent = (content: string) => {
+    if (!content) return null;
+    
+    // Process headers
+    content = content.replace(/### (.+)/g, '<h3 class="text-lg font-semibold mt-6 mb-3 text-blue-600 dark:text-blue-400">$1</h3>');
+    
+    // Process bold text for stores and amounts
+    content = content.replace(/\*\*(.*?)\*\*/g, (match, p1) => {
+      // Check if it's a currency value
+      if (/[₦$€£]\s*\d+/.test(p1)) {
+        return `<span class="font-bold text-green-600 dark:text-green-400">${p1}</span>`;
+      }
+      // Check if it's a store name
+      if (p1.toLowerCase().includes('store') || p1.toLowerCase().includes('market') || p1 === p1.toUpperCase()) {
+        return `<span class="font-bold text-purple-600 dark:text-purple-400">${p1}</span>`;
+      }
+      // Default bold
+      return `<span class="font-bold text-foreground">${p1}</span>`;
+    });
+    
+    // Process list items
+    content = content.replace(/^\s*-\s*(.+)$/gm, '<li class="flex items-start gap-2 mb-1"><span class="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 mt-2.5 flex-shrink-0"></span><span>$1</span></li>');
+    content = content.replace(/<li/g, '<li class="pl-2"');
+    
+    // Wrap lists in ul
+    content = content.replace(/(<li>.*<\/li>)/gs, (match) => {
+      if (match.includes('<ul')) return match; // Skip if already wrapped
+      return `<ul class="space-y-2 my-2 pl-4">${match}</ul>`;
+    });
+    
+    return { __html: content };
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-hidden p-0 bg-white dark:bg-gray-900">
+      <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-hidden p-0 bg-white dark:bg-gray-900">
         {/* Header */}
-        <DialogHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-                Smart Spending Plan: {categoryName}
-              </DialogTitle>
+        <DialogHeader className="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {recommendation.title}
+                </DialogTitle>
+                {recommendation.amount && (
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">
+                    {formatAmount(recommendation.amount)}
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Here's how you can optimize your {categoryName.toLowerCase()} spending
+                {recommendation.description}
               </p>
+              {recommendation.impact && (
+                <div className={`mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                  recommendation.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200' :
+                  recommendation.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200' :
+                  'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+                }`}>
+                  {recommendation.impact}
+                </div>
+              )}
             </div>
             <Button
               variant="ghost"
@@ -179,134 +188,143 @@ export const SmartRecommendationModal: React.FC<SmartRecommendationModalProps> =
         </DialogHeader>
 
         {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
-          <div className="px-6 py-4 space-y-6">
-            {/* Spending Overview */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center">
-                  <p className="text-sm opacity-90">Current Monthly Spending</p>
-                  <p className="text-2xl font-bold">{formatCurrency(data.currentSpending)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm opacity-90">% of Total Expenses</p>
-                  <p className="text-2xl font-bold">{data.percentage}%</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm opacity-90">vs. Average Users</p>
-                  <div className="flex items-center justify-center space-x-2">
-                    {data.trend === "up" ? (
-                      <TrendingUp className="h-5 w-5" />
-                    ) : (
-                      <TrendingDown className="h-5 w-5" />
-                    )}
-                    <p className="text-lg font-semibold">{data.comparison}</p>
+        <div className="overflow-y-auto max-h-[calc(90vh-120px)] p-6">
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center p-8 space-y-4">
+              <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+              <div className="text-center space-y-2">
+                <h3 className="font-medium text-gray-900 dark:text-white">Analyzing Your Spending</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Our AI is reviewing your {recommendation.category?.toLowerCase() || 'spending'} patterns
+                  to provide personalized recommendations...
+                </p>
+              </div>
+            </div>
+          )}
+          {error && (
+            <div className="p-6 space-y-4">
+              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-red-800 dark:text-red-200">Unable to Load Analysis</h4>
+                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
                   </div>
                 </div>
               </div>
+              <div className="flex space-x-3">
+                <Button variant="outline" onClick={onClose} className="flex-1">
+                  Close
+                </Button>
+                <Button onClick={handleRetry} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Try Again
+                </Button>
+              </div>
             </div>
+          )}
+          {aiRecommendation && (
+            <div className="space-y-6">
+              {/* Analysis Section */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <BarChart3 className="h-5 w-5 text-blue-500" />
+                    <h3 className="font-medium">Analysis</h3>
+                  </div>
+                  <div 
+                    className="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300"
+                    dangerouslySetInnerHTML={formatAIContent(aiRecommendation.analysis)}
+                  />
+                </CardContent>
+              </Card>
 
-            {/* Action Cards */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Quick Actions
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {actionCards.map((action) => (
-                  <Card
-                    key={action.id}
-                    className={`cursor-pointer transition-all duration-200 hover:scale-105 ${
-                      selectedAction === action.id 
-                        ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                        : 'hover:shadow-md'
-                    }`}
-                    onClick={() => setSelectedAction(action.id)}
-                  >
-                    <CardContent className="p-4 text-center">
-                      <div className={`${action.color} text-white rounded-lg p-3 w-fit mx-auto mb-2`}>
-                        {action.icon}
-                      </div>
-                      <h4 className="font-medium text-gray-900 dark:text-white text-sm">
-                        {action.title}
-                      </h4>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        {action.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+              {/* Recommendations */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Target className="h-5 w-5 text-green-500" />
+                    <h3 className="font-medium">Recommended Actions</h3>
+                  </div>
+                  <div 
+                    className="prose dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{
+                      __html: aiRecommendation.recommendations
+                        ?.map(rec => 
+                          rec.replace(/^\s*-\s*/, '')
+                             .replace(/\*\*(.*?)\*\*/g, '<span class="font-medium text-foreground">$1</span>')
+                        )
+                        .map(rec => 
+                          `<div class="flex items-start gap-3 mb-2">
+                            <div class="h-2 w-2 rounded-full bg-blue-500 mt-2.5 flex-shrink-0"></div>
+                            <div>${rec}</div>
+                          </div>`
+                        )
+                        .join('')
+                    }}
+                  />
+                </CardContent>
+              </Card>
 
-            {/* Detailed Breakdown */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Spending Breakdown
-              </h3>
-              <div className="space-y-3">
-                {data.subcategories.map((sub, index) => (
-                  <Card key={index} className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <h4 className="font-medium text-gray-900 dark:text-white">
-                            {sub.name}
-                          </h4>
-                          {sub.trend === "up" && <TrendingUp className="h-4 w-4 text-red-500" />}
-                          {sub.trend === "down" && <TrendingDown className="h-4 w-4 text-green-500" />}
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-gray-900 dark:text-white">
-                            {formatCurrency(sub.amount)}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {sub.percentage}% of total
-                          </p>
-                        </div>
-                      </div>
-                      <Progress value={sub.percentage} className="h-2" />
-                    </CardContent>
-                  </Card>
-                ))}
+              {/* Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <TrendingUp className="h-5 w-5 text-green-500" />
+                      <h3 className="font-medium">Potential Savings</h3>
+                    </div>
+                    <p 
+                      className="text-lg font-semibold text-green-600 dark:text-green-400"
+                      dangerouslySetInnerHTML={{
+                        __html: aiRecommendation.potentialSavings
+                          ?.replace(/([₦$€£]\s*[\d,.]+)/g, 
+                            '<span class="text-2xl">$1</span>')
+                          .replace(/Potential savings:/, '<span class="text-foreground">Potential savings:</span> ')
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <DollarSign className="h-5 w-5 text-blue-500" />
+                      <h3 className="font-medium">Suggested Budget</h3>
+                    </div>
+                    <p 
+                      className="text-lg font-semibold text-blue-600 dark:text-blue-400"
+                      dangerouslySetInnerHTML={{
+                        __html: aiRecommendation.suggestedBudget
+                          ?.replace(/([₦$€£]\s*[\d,.]+)/g, 
+                            '<span class="text-2xl">$1</span>')
+                          .replace(/Suggested budget:/, '<span class="text-foreground">Suggested budget:</span> ')
+                      }}
+                    />
+                  </CardContent>
+                </Card>
               </div>
-            </div>
 
-            {/* Smart Suggestions */}
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Smart Suggestions
-                </h3>
-                <Info className="h-4 w-4 text-blue-500" />
-              </div>
-              <div className="space-y-3">
-                {data.suggestions.map((suggestion, index) => (
-                  <Card key={index} className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border-l-4 border-green-500">
-                    <CardContent className="p-4">
-                      <div className="flex items-start space-x-3">
-                        <div className="bg-green-500 text-white rounded-full p-1 mt-1">
-                          <Clock className="h-3 w-3" />
-                        </div>
-                        <p className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                          {suggestion}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              {/* Action Buttons */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                <Button className="w-full" size="lg">
+                  Set Budget & Save Plan
+                </Button>
+                <p className="text-xs text-center text-gray-500 mt-2">
+                  We'll help you track your progress and adjust as needed.
+                </p>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Sticky Bottom Actions */}
         <div className="border-t border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-900">
           <div className="flex flex-col sm:flex-row gap-3">
             <Button className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
-              Set Budget for {categoryName}
+              Set Budget & Save Plan
             </Button>
             <Button variant="outline" className="flex-1">
-              <Clock className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-4 w-4 mr-2" />
               Remind Me Later
             </Button>
             <Button variant="ghost" className="flex-1 text-gray-600 dark:text-gray-400">

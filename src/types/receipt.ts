@@ -31,7 +31,20 @@ export interface ReceiptUpdate extends Partial<Omit<BaseReceipt, 'id' | 'user_id
   id: string;
 }
 
-export type Category = 'Food' | 'Utilities' | 'Shopping' | 'Transportation' | 'Entertainment' | 'Healthcare' | 'Others';
+export type Category = 
+  | 'Groceries'    // Food items from supermarkets/grocery stores
+  | 'Dining'       // Restaurant meals, takeout, coffee shops
+  | 'Transportation' // Gas, public transit, parking, ride-sharing
+  | 'Shopping'     // Retail purchases, clothing, electronics
+  | 'Bills'        // Utilities, phone, internet, subscriptions
+  | 'Health'       // Pharmacy, medical expenses, fitness
+  | 'Entertainment' // Movies, games, events, hobbies
+  | 'Travel'       // Flights, hotels, car rentals
+  | 'Education'    // Books, courses, school supplies
+  | 'Home'         // Furniture, appliances, home improvement
+  | 'Personal Care' // Beauty, hygiene, salon services
+  | 'Gifts'        // Presents, donations, charity
+  | 'Others';      // Anything that doesn't fit above
 
 export interface ReceiptItem {
   id?: string;
