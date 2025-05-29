@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import {
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useReceipts } from "@/hooks/useReceipts";
 import { format, subMonths, isThisMonth, isThisWeek, subWeeks, isAfter, isBefore } from "date-fns";
+import { SmartRecommendationModal } from "@/components/SmartRecommendationModal";
 
 // Define a type for the processed receipt data
 interface ProcessedReceipt {
@@ -45,9 +46,21 @@ const Insights = () => {
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
   const { receipts, loading } = useReceipts();
+  const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleBack = () => {
     navigate("/dashboard");
+  };
+
+  const handleApplyRecommendation = (recommendation: any) => {
+    setSelectedRecommendation(recommendation);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedRecommendation(null);
   };
 
   // Process receipt data for insights
@@ -541,7 +554,13 @@ const Insights = () => {
                           {rec.impact}
                         </p>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        onClick={() => handleApplyRecommendation(rec)}
+                        disabled={loading}
+                      >
                         Apply
                       </Button>
                     </div>
@@ -552,6 +571,13 @@ const Insights = () => {
           </div>
         </div>
       </div>
+
+      {/* Smart Recommendation Modal */}
+      <SmartRecommendationModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        recommendation={selectedRecommendation}
+      />
     </div>
   );
 };
