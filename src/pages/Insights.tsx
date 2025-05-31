@@ -130,13 +130,28 @@ const Insights = () => {
       return processed;
     });
 
-    // Calculate monthly spending
+    // Calculate monthly spending and current month's savings
     const monthlySpending = processedReceipts.reduce((acc, receipt) => {
       if (!receipt.date) return acc;
       const month = new Date(receipt.date).toLocaleString('default', { month: 'short' });
       acc[month] = (acc[month] || 0) + (receipt.total_amount || 0);
       return acc;
     }, {} as Record<string, number>);
+    
+    // Calculate current month's savings (total discounts for current month)
+    const currentMonth = new Date().toLocaleString('default', { month: 'short' });
+    const currentYear = new Date().getFullYear();
+    const currentMonthSavings = processedReceipts
+      .filter(receipt => {
+        if (!receipt.date) return false;
+        const receiptDate = new Date(receipt.date);
+        return (
+          receiptDate.getMonth() === new Date().getMonth() &&
+          receiptDate.getFullYear() === currentYear &&
+          receipt.discount_amount && receipt.discount_amount > 0
+        );
+      })
+      .reduce((sum, receipt) => sum + (receipt.discount_amount || 0), 0);
     
     // Calculate monthly trend (comparing current month to previous month)
     const months = Object.keys(monthlySpending).sort();
@@ -346,6 +361,7 @@ const Insights = () => {
       subscriptionCosts,
       averageDailySpend,
       currentMonthSpending,
+      currentMonthSavings,
       paymentMethods,
       timeOfDaySpending,
       recommendations: recommendations.length > 0 
@@ -558,7 +574,7 @@ const Insights = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm opacity-90">Saved</p>
-                    <p className="text-2xl font-bold">{formatCurrency(insights?.subscriptionCosts?.total ? (insights.currentMonthSpending - insights.subscriptionCosts.total) : 0)}</p>
+                    <p className="text-2xl font-bold">{formatCurrency(insights?.currentMonthSavings || 0)}</p>
                   </div>
                   <TrendingUp className="h-8 w-8 opacity-80" />
                 </div>
