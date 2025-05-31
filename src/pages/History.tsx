@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search, Filter, ArrowUpDown, Calendar, Trash2, Home, History as HistoryIcon, Settings, Loader2, Receipt, TrendingUp, Store } from "lucide-react";
+import { ArrowLeft, Search, Filter, ArrowUpDown, Calendar, Trash2, Home, History as HistoryIcon, Settings, Loader2, Receipt, TrendingUp, Store, BarChart } from "lucide-react";
 import { format } from "date-fns";
 import { useReceipts } from "@/hooks/useReceipts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -365,6 +365,15 @@ const History = () => {
             >
               <HistoryIcon size={20} />
               <span className="text-xs mt-1">History</span>
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              className="h-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl flex-1 mx-1"
+              onClick={() => navigate('/insights')}
+            >
+              <BarChart size={20} />
+              <span className="text-xs mt-1">Insights</span>
             </Button>
             
             <Button 

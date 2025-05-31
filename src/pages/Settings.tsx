@@ -2,7 +2,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Bell, Moon, Sun, CreditCard, Lock, HelpCircle, LogOut, Home, History, Settings as SettingsIcon } from "lucide-react";
+import { ChevronLeft, Bell, Moon, Sun, CreditCard, Lock, HelpCircle, LogOut, Home, History, Settings as SettingsIcon, BarChart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -206,6 +206,15 @@ const Settings = () => {
             >
               <History size={20} />
               <span className="text-xs mt-1">History</span>
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              className="h-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl flex-1 mx-1"
+              onClick={() => navigate('/insights')}
+            >
+              <BarChart size={20} />
+              <span className="text-xs mt-1">Insights</span>
             </Button>
             
             <Button 

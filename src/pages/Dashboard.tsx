@@ -467,14 +467,14 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
                   <PieChartIcon className="h-4 w-4 mr-2 text-blue-500" />
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Spending by Category</h3>
                 </div>
-                <Button 
+                {/* <Button 
                   variant="ghost" 
                   size="sm" 
                   className="h-6 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-0"
                   onClick={() => navigate('/categories')}
                 >
                   View All
-                </Button>
+                </Button> */}
               </div>
               <div className="h-64">
                 <PieChart 
@@ -502,7 +502,12 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
             <CardContent className="p-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Recent Expenses</h3>
-                <Button variant="ghost" size="sm" className="h-6 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-0">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-0"
+                  onClick={() => navigate('/history')}
+                >
                   View All
                 </Button>
               </div>

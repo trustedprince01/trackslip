@@ -17,7 +17,10 @@ import {
   Percent,
   Clock,
   CalendarDays,
-  CreditCard
+  CreditCard,
+  Home,
+  History,
+  Settings
 } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useReceipts } from "@/hooks/useReceipts";
@@ -658,6 +661,46 @@ const Insights = () => {
         recommendation={selectedRecommendation}
         receipts={receipts}
       />
+      
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 flex justify-center">
+        <div className="w-full max-w-[430px] h-16 flex justify-around items-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-200/20 dark:border-gray-800/20 px-6">
+          <Button 
+            variant="ghost" 
+            className="h-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl flex-1 mx-1"
+            onClick={() => navigate('/dashboard')}
+          >
+            <Home size={20} />
+            <span className="text-xs mt-1">Home</span>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="h-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl flex-1 mx-1"
+            onClick={() => navigate('/history')}
+          >
+            <History size={20} />
+            <span className="text-xs mt-1">History</span>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="h-12 flex flex-col items-center justify-center text-blue-500 dark:text-blue-400 rounded-xl flex-1 mx-1"
+          >
+            <BarChart3 size={20} />
+            <span className="text-xs mt-1">Insights</span>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="h-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl flex-1 mx-1"
+            onClick={() => navigate('/settings')}
+          >
+            <Settings size={20} />
+            <span className="text-xs mt-1">Settings</span>
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
