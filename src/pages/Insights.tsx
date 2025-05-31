@@ -21,8 +21,9 @@ import {
 } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useReceipts } from "@/hooks/useReceipts";
+import { categorizeItem } from "@/utils/categoryUtils";
 import { format, subMonths, isThisMonth, isThisWeek, subWeeks, isAfter, isBefore } from "date-fns";
-import { SmartRecommendationModal } from "@/components/SmartRecommendationModal";
+import SmartRecommendationModal from "@/components/SmartRecommendationModal";
 
 // Define a type for the processed receipt data
 interface ProcessedReceipt {
@@ -180,21 +181,41 @@ const Insights = () => {
       : 0;
 
     // Calculate category totals and payment methods
-    const categoryTotals = processedReceipts.reduce<Record<string, number>>((acc, receipt) => {
-      if (receipt.items && receipt.items.length > 0) {
+    const categoryTotals: Record<string, number> = {};
+    
+    processedReceipts.forEach(receipt => {
+      // First try to get the category from the receipt itself
+      // If not available, try to determine it from items
+      let category = receipt.category;
+      
+      if (!category && receipt.items && receipt.items.length > 0) {
+        // Try to get category from items if not set at receipt level
+        const itemCategories = new Set<string>();
         receipt.items.forEach(item => {
-          const category = item.category || 'Uncategorized';
-          acc[category] = (acc[category] || 0) + (item.price * (item.quantity || 1));
+          const itemCategory = item.category || categorizeItem(item.name);
+          if (itemCategory) {
+            itemCategories.add(itemCategory);
+          }
         });
+        
+        // If all items have the same category, use that
+        if (itemCategories.size === 1) {
+          category = Array.from(itemCategories)[0];
+        }
       }
-      return acc;
-    }, {});
+      
+      // Default to 'Others' if no category could be determined
+      const finalCategory = category || 'Others';
+      
+      // Use the receipt's total_amount for the category total
+      categoryTotals[finalCategory] = (categoryTotals[finalCategory] || 0) + (receipt.total_amount || 0);
+    });
     
     const topCategory = Object.entries(categoryTotals)
       .sort((a, b) => b[1] - a[1])[0];
     
     const totalSpent = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
-    const topCategoryPercentage = Math.round((topCategory?.[1] / totalSpent) * 100) || 0;
+    const topCategoryPercentage = totalSpent > 0 ? Math.round((topCategory?.[1] / totalSpent) * 100) : 0;
     
     // Calculate payment method breakdown
     const paymentMethods = processedReceipts.reduce<Record<string, number>>((acc, receipt) => {
@@ -267,11 +288,17 @@ const Insights = () => {
     const recommendations = [];
     
     if (topCategory && topCategory[1] > (totalSpent * 0.4)) {
+      // Calculate potential savings as 15% of the top category spending
+      const potentialSavings = topCategory[1] * 0.15;
       recommendations.push({
         title: `Reduce ${topCategory[0]} Spending`,
         description: `Your ${topCategory[0].toLowerCase()} spending is ${topCategoryPercentage}% of total expenses`,
-        impact: `Potential savings: ${formatCurrency(topCategory[1] * 0.2)}/month`,
-        priority: "high"
+        impact: `Potential savings: ${formatCurrency(potentialSavings)}/month`,
+        priority: "high",
+        category: topCategory[0],
+        amount: topCategory[1],
+        percentage: topCategoryPercentage,
+        potentialSavings: potentialSavings
       });
     }
     
@@ -466,13 +493,12 @@ const Insights = () => {
       {
         title: `Optimize ${insights.topCategory.name} Spending`,
         description: `You've spent ${formatCurrency(insights.topCategory.amount)} on ${insights.topCategory.name.toLowerCase()} this month`,
-        impact: `Potential savings: ${formatCurrency(insights.topCategory.amount * 0.15)}/month`,
+        impact: "",
         priority: "high",
         category: insights.topCategory.name,
         amount: insights.topCategory.amount,
         percentage: insights.topCategory.percentage
-      },
-      ...(insights.subscriptionCosts.count > 0 ? [{
+      },      ...(insights.subscriptionCosts.count > 0 ? [{
         title: "Review Subscriptions",
         description: `You have ${insights.subscriptionCosts.count} active subscriptions`,
         impact: `Monthly cost: ${formatCurrency(insights.subscriptionCosts.total)}`,

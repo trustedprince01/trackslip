@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,73 +32,101 @@ interface SmartRecommendationModalProps {
   receipts?: any[];
 }
 
-export const SmartRecommendationModal: React.FC<SmartRecommendationModalProps> = ({
+const SmartRecommendationModal: React.FC<SmartRecommendationModalProps> = ({
   isOpen,
   onClose,
   recommendation,
   receipts = []
 }) => {
+  // Return null if no recommendation is provided
+  if (!recommendation) return null;
   const [aiRecommendation, setAiRecommendation] = useState<AIRecommendation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { formatCurrency } = useCurrency();
 
-  useEffect(() => {
-    const fetchRecommendation = async () => {
-      if (!isOpen || !recommendation?.category) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Filter receipts by the selected category
-        const categoryReceipts = receipts.filter(receipt => 
-          receipt.category === recommendation.category ||
-          receipt.items?.some((item: any) => item.category === recommendation.category)
-        );
+  const fetchRecommendation = useCallback(async (forceRefresh = false) => {
+    if (!isOpen || !recommendation?.category) return;
+    
+    const loadingState = forceRefresh ? setIsRefreshing : setIsLoading;
+    loadingState(true);
+    setError(null);
+    
+    try {
+      // Filter receipts by the selected category
+      const categoryReceipts = receipts.filter(receipt => 
+        receipt.category === recommendation.category ||
+        receipt.items?.some((item: any) => item.category === recommendation.category)
+      );
 
-        console.log('Filtered receipts for category:', {
-          category: recommendation.category,
-          receiptCount: categoryReceipts.length,
-          totalReceipts: receipts.length,
-          sampleReceipt: categoryReceipts[0] // Log first receipt for debugging
-        });
+      console.log('Filtered receipts for category:', {
+        category: recommendation.category,
+        receiptCount: categoryReceipts.length,
+        totalReceipts: receipts.length,
+        sampleReceipt: categoryReceipts[0] // Log first receipt for debugging
+      });
 
-        if (categoryReceipts.length === 0) {
-          throw new Error(`No receipt data found for category: ${recommendation.category}`);
-        }
-        
-        const result = await getAIRecommendation(
-          categoryReceipts,
-          recommendation.category,
-          {
-            amount: recommendation.amount || 0,
-            percentage: recommendation.percentage || 0,
-            transactionCount: categoryReceipts.length
-          },
-          formatCurrency
-        );
-        
-        if (!result) {
-          throw new Error('No recommendations generated');
-        }
-        
-        setAiRecommendation(result);
-      } catch (err) {
-        console.error('Error fetching AI recommendation:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load recommendations. Please try again later.');
-      } finally {
-        setIsLoading(false);
+      if (categoryReceipts.length === 0) {
+        throw new Error(`No receipt data found for category: ${recommendation.category}`);
       }
-    };
+      
+      const result = await getAIRecommendation(
+        categoryReceipts,
+        recommendation.category,
+        {
+          amount: recommendation.amount || 0,
+          percentage: recommendation.percentage || 0,
+          transactionCount: categoryReceipts.length
+        },
+        formatCurrency,
+        forceRefresh
+      );
+      
+      if (!result) {
+        throw new Error('No recommendations generated');
+      }
+      
+      setAiRecommendation(result);
+    } catch (err) {
+      console.error('Error fetching AI recommendation:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load recommendations. Please try again later.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [isOpen, recommendation, receipts, formatCurrency]);
 
-    fetchRecommendation();
-  }, [isOpen, recommendation, receipts]);
+  useEffect(() => {
+    if (isOpen && recommendation?.category) {
+      fetchRecommendation();
+    }
+  }, [isOpen, recommendation, fetchRecommendation]);
 
-  if (!recommendation) return null;
+
+
+  const handleRefresh = async () => {
+    if (recommendation?.category) {
+      try {
+        setIsRefreshing(true);
+        setError(null);
+        
+        // Call fetchRecommendation with forceRefresh: true
+        await fetchRecommendation(true);
+        
+      } catch (err) {
+        console.error('Error refreshing recommendation:', err);
+        setError(err instanceof Error ? err.message : 'Failed to refresh recommendation. Please try again.');
+      } finally {
+        setIsRefreshing(false);
+      }
+    }
+  };
 
   const handleRetry = () => {
-    setAiRecommendation(null);
+    if (recommendation?.category) {
+      fetchRecommendation(true);
+    }
     setError(null);
   };
 
@@ -213,12 +241,26 @@ export const SmartRecommendationModal: React.FC<SmartRecommendationModalProps> =
                 </div>
               </div>
               <div className="flex space-x-3">
-                <Button variant="outline" onClick={onClose} className="flex-1">
-                  Close
+                <Button 
+                  variant="outline" 
+                  onClick={onClose}
+                  className="mr-2"
+                >
+                  <X className="mr-2 h-4 w-4" /> Close
                 </Button>
-                <Button onClick={handleRetry} className="flex-1 bg-blue-600 hover:bg-blue-700">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Try Again
+                <Button 
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                >
+                  {isRefreshing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Refreshing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -274,15 +316,12 @@ export const SmartRecommendationModal: React.FC<SmartRecommendationModalProps> =
                       <TrendingUp className="h-5 w-5 text-green-500" />
                       <h3 className="font-medium">Potential Savings</h3>
                     </div>
-                    <p 
-                      className="text-lg font-semibold text-green-600 dark:text-green-400"
-                      dangerouslySetInnerHTML={{
-                        __html: aiRecommendation.potentialSavings
-                          ?.replace(/([₦$€£]\s*[\d,.]+)/g, 
-                            '<span class="text-2xl">$1</span>')
-                          .replace(/Potential savings:/, '<span class="text-foreground">Potential savings:</span> ')
-                      }}
-                    />
+                    <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                      <span className="text-foreground">Potential savings: </span>
+                      <span className="text-2xl">
+                        {aiRecommendation.potentialSavings?.match(/([₦$€£]\s*[\d,.]+)/)?.[0] || '$0'}
+                      </span>
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -291,26 +330,42 @@ export const SmartRecommendationModal: React.FC<SmartRecommendationModalProps> =
                       <DollarSign className="h-5 w-5 text-blue-500" />
                       <h3 className="font-medium">Suggested Budget</h3>
                     </div>
-                    <p 
-                      className="text-lg font-semibold text-blue-600 dark:text-blue-400"
-                      dangerouslySetInnerHTML={{
-                        __html: aiRecommendation.suggestedBudget
-                          ?.replace(/([₦$€£]\s*[\d,.]+)/g, 
-                            '<span class="text-2xl">$1</span>')
-                          .replace(/Suggested budget:/, '<span class="text-foreground">Suggested budget:</span> ')
-                      }}
-                    />
+                    <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                      <span className="text-foreground">Suggested budget: </span>
+                      <span className="text-2xl">
+                        {aiRecommendation.suggestedBudget?.match(/([₦$€£]\s*[\d,.]+)/)?.[0] || '$0'}
+                      </span>
+                    </p>
                   </CardContent>
                 </Card>
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                <Button className="w-full" size="lg">
-                  Set Budget & Save Plan
-                </Button>
-                <p className="text-xs text-center text-gray-500 mt-2">
-                  We'll help you track your progress and adjust as needed.
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
+                <div className="flex gap-3">
+                  <Button className="flex-1" size="lg">
+                    Set Budget & Save Plan
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="flex-1"
+                  >
+                    {isRefreshing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Re-analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" /> Re-apply
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-center text-gray-500">
+                  Click "Re-apply" to get fresh AI analysis with your latest data
                 </p>
               </div>
             </div>
@@ -337,3 +392,5 @@ export const SmartRecommendationModal: React.FC<SmartRecommendationModalProps> =
     </Dialog>
   );
 };
+
+export default SmartRecommendationModal;

@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { saveRecommendation, getRecommendation, convertToAIRecommendation } from "./RecommendationDBService";
 
 type FormatCurrencyFunction = (amount: number) => string;
 
@@ -65,8 +66,17 @@ export const getAIRecommendation = async (
     percentage: number;
     transactionCount: number;
   },
-  formatCurrency: FormatCurrencyFunction = (amount) => `₦${amount.toFixed(2)}`
+  formatCurrency: FormatCurrencyFunction = (amount) => `₦${amount.toFixed(2)}`,
+  forceRefresh = false
 ): Promise<AIRecommendation | null> => {
+  // Check for existing recommendation in DB first if not forcing a refresh
+  if (!forceRefresh) {
+    const existingRec = await getRecommendation(category);
+    if (existingRec) {
+      return convertToAIRecommendation(existingRec);
+    }
+  }
+
   const cacheKey = generateCacheKey(category, spendingData.amount);
   
   // Return cached result if available
@@ -77,7 +87,10 @@ export const getAIRecommendation = async (
   // If no API key or no receipts, return a fallback response
   if (!genAI) {
     console.warn('No Gemini API key found. Using fallback recommendations.');
-    return generateFallbackRecommendation(category, spendingData);
+    const fallback = generateFallbackRecommendation(category, spendingData);
+    // Save fallback to DB
+    await saveRecommendation(category, fallback);
+    return fallback;
   }
 
   // Check if we have any receipts
@@ -236,92 +249,143 @@ RESPONSE FORMAT (strict JSON only, no markdown or backticks):
   ],
   "potentialSavings": {
     "amount": estimated_monthly_savings,
-    "reasoning": "Breakdown of how the savings were calculated"
+    "reasoning": "Based on your spending patterns and item details"
+   
   },
   "suggestedBudget": {
     "amount": suggested_monthly_budget,
-    "reasoning": "Explanation of the suggested budget based on spending patterns"
+    "reasoning": "Based on your spending patterns and item details"
+    
   },
   "confidence": "high/medium/low"
 }
 
 IMPORTANT: Focus on specific items and exact amounts where possible. Avoid generic advice.`;
 
+  let text = '';
   try {
     console.log('Sending prompt to AI model:', { category, transactionCount: transactions.length });
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    console.log('Raw AI response:', { textLength: text.length, first100Chars: text.substring(0, 100) });
-    
-    // Clean up the response and parse JSON
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error('No JSON found in response. Full response:', text);
-      throw new Error('Invalid response format from AI: No JSON object found');
-    }
-    
-    let aiResponse;
     try {
-      aiResponse = JSON.parse(jsonMatch[0]);
-      console.log('Parsed AI response:', aiResponse);
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      text = response.text();
       
-      // Ensure the response has the expected structure
-      if (!aiResponse.analysis || !aiResponse.recommendations) {
-        throw new Error(`Invalid response structure from AI. Missing required fields. Got: ${Object.keys(aiResponse).join(', ')}`);
-      }
-      
-      // Format the response to match the AIRecommendation interface
-      // Safely parse confidence level with fallback
-      const confidence = (() => {
-        try {
-          const conf = String(aiResponse.confidence || '').toLowerCase();
-          return ['high', 'medium', 'low'].includes(conf) 
-            ? conf as 'high' | 'medium' | 'low' 
-            : 'medium';
-        } catch (e) {
-          console.warn('Error parsing confidence level, using default');
-          return 'medium';
+      // Try to parse the response as JSON first
+      try {
+        // Clean the response to extract just the JSON part
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('No JSON object found in response');
+        
+        const aiResponse = JSON.parse(jsonMatch[0]);
+        
+        // Format the response to match the AIRecommendation interface
+        const aiRecommendation: AIRecommendation = {
+          analysis: aiResponse.analysis || `Analysis of your spending in ${category} shows opportunities for optimization.`,
+          recommendations: Array.isArray(aiResponse.recommendations) && aiResponse.recommendations.length > 0 
+            ? aiResponse.recommendations 
+            : [
+                `Consider setting a monthly budget for ${category}`,
+                `Look for discounts or coupons when shopping for ${category}`,
+                `Review if all ${category} expenses are necessary`
+              ],
+          potentialSavings: typeof aiResponse.potentialSavings === 'string' 
+            ? aiResponse.potentialSavings 
+            : aiResponse.potentialSavings?.reasoning 
+              ? `Potential savings: ${formatCurrency(aiResponse.potentialSavings.amount || 0)}. ${aiResponse.potentialSavings.reasoning}`
+              : `Potential savings of ${formatCurrency(spendingData.amount * 0.15)} per month.`,
+          suggestedBudget: typeof aiResponse.suggestedBudget === 'string'
+            ? aiResponse.suggestedBudget
+            : aiResponse.suggestedBudget?.reasoning
+              ? `Suggested budget: ${formatCurrency(aiResponse.suggestedBudget.amount || spendingData.amount * 0.85)}. ${aiResponse.suggestedBudget.reasoning}`
+              : `Suggested budget: ${formatCurrency(spendingData.amount * 0.85)}`,
+          confidence: ['high', 'medium', 'low'].includes(aiResponse.confidence?.toLowerCase())
+            ? aiResponse.confidence.toLowerCase() as 'high' | 'medium' | 'low'
+            : 'medium',
+          categoryInsights: Array.isArray(aiResponse.categoryInsights) && aiResponse.categoryInsights.length > 0
+            ? aiResponse.categoryInsights
+            : [
+                `You've spent ${formatCurrency(spendingData.amount)} in this category`,
+                `This represents ${spendingData.percentage.toFixed(1)}% of your total spending`,
+                `You've made ${spendingData.transactionCount} transactions in this category`
+              ]
+        };
+        
+        console.log('Successfully parsed AI response:', aiRecommendation);
+        
+        // Save the recommendation to the database
+        await saveRecommendation(category, aiRecommendation);
+        
+        // Update the cache
+        recommendationCache.set(cacheKey, aiRecommendation);
+        
+        return aiRecommendation;
+      } catch (jsonError) {
+        console.warn('Failed to parse JSON response, falling back to regex parsing:', jsonError);
+        
+        // Fallback to regex parsing if JSON parsing fails
+        const analysis = text.match(/## Analysis([\s\S]*?)(?=## |$)/i)?.[1]?.trim() || 
+                       `Analysis of your spending in ${category} shows opportunities for optimization.`;
+        
+        const recommendations = Array.from(
+          text.matchAll(/\*\*(.*?)\*\*/g),
+          (match) => match[1]
+        ).filter(rec => rec.trim().length > 0);
+        
+        const potentialSavings = text.match(/Potential Savings:([^\n]+)/i)?.[1]?.trim() || 
+                             `Potential savings of ${formatCurrency(spendingData.amount * 0.15)} per month.`;
+        
+        const suggestedBudget = text.match(/Suggested Budget:([^\n]+)/i)?.[1]?.trim() || 
+                            `Suggested budget: ${formatCurrency(spendingData.amount * 0.85)}`;
+        
+        const confidenceMatch = text.match(/Confidence: ([^\n]+)/i);
+        let confidence: 'high' | 'medium' | 'low' = 'medium';
+        if (confidenceMatch) {
+          const confText = confidenceMatch[1].toLowerCase().trim();
+          if (confText.includes('high')) confidence = 'high';
+          else if (confText.includes('low')) confidence = 'low';
         }
-      })();
+        
+        const categoryInsights = Array.from(
+          text.matchAll(/- (.*?)(?=\n|$)/g),
+          (match) => match[1]
+        ).filter(insight => 
+          insight && 
+          !insight.includes('**') && 
+          !insight.includes('Potential Savings:') && 
+          !insight.includes('Suggested Budget:') &&
+          !insight.includes('Confidence:')
+        );
 
-      const formattedResponse: AIRecommendation = {
-        analysis: aiResponse.analysis || 'No analysis available',
-        recommendations: Array.isArray(aiResponse.recommendations) 
-          ? aiResponse.recommendations.filter(Boolean)
-          : ['No specific recommendations available'],
-        potentialSavings: (() => {
-          if (typeof aiResponse.potentialSavings === 'string') return aiResponse.potentialSavings;
-          if (aiResponse.potentialSavings?.amount !== undefined) {
-            return `Potential savings: ${formatCurrency(Number(aiResponse.potentialSavings.amount))}`;
-          }
-          return `Potential savings: ${formatCurrency(0)}`;
-        })(),
-        suggestedBudget: (() => {
-          if (typeof aiResponse.suggestedBudget === 'string') return aiResponse.suggestedBudget;
-          if (aiResponse.suggestedBudget?.amount !== undefined) {
-            return `Suggested budget: ${formatCurrency(Number(aiResponse.suggestedBudget.amount))}`;
-          }
-          return 'Suggested budget: Not available';
-        })(),
-        confidence,
-        categoryInsights: Array.isArray(aiResponse.categoryInsights) 
-          ? aiResponse.categoryInsights.filter(Boolean) 
-          : []
-      };
-      
-      console.log('Formatted response:', formattedResponse);
-      
-      // Cache the result
-      recommendationCache.set(cacheKey, formattedResponse);
-      
-      return formattedResponse;
-      
+        const aiRecommendation: AIRecommendation = {
+          analysis,
+          recommendations: recommendations.length > 0 ? recommendations : [
+            `Consider setting a monthly budget for ${category}`,
+            `Look for discounts or coupons when shopping for ${category}`,
+            `Review if all ${category} expenses are necessary`
+          ],
+          potentialSavings,
+          suggestedBudget,
+          confidence,
+          categoryInsights: categoryInsights.length > 0 ? categoryInsights : [
+            `You've spent ${formatCurrency(spendingData.amount)} in this category`,
+            `This represents ${spendingData.percentage.toFixed(1)}% of your total spending`,
+            `You've made ${spendingData.transactionCount} transactions in this category`
+          ]
+        };
+        
+        console.log('Successfully parsed AI response with fallback parsing:', aiRecommendation);
+        recommendationCache.set(cacheKey, aiRecommendation);
+        return aiRecommendation;
+      }
+
+      // This code is unreachable due to the return statements in the try-catch blocks above
+      // Keeping it as a fallback with a default recommendation
+      const fallbackRecommendation = generateFallbackRecommendation(category, spendingData);
+      await saveRecommendation(category, fallbackRecommendation);
+      return fallbackRecommendation;
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
-      console.error('Raw response text:', text);
+      console.error('Raw response text:', text || 'No response text available');
       throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
   } catch (error) {

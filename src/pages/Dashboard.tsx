@@ -46,55 +46,78 @@ const Dashboard: React.FC = () => {
   }
   
   // Calculate tax, discount, and category data
-  const { totalTax, totalDiscount, categoryData } = useMemo(() => {
-    if (!receipts.length) return { 
-      totalTax: 0, 
-      totalDiscount: 0, 
-      categoryData: [] as PieChartData[] 
-    };
-    
-    // Extract all items from receipts
-    const allItems = receipts.flatMap(receipt => 
-      (receipt.items || []).map(item => ({
-        ...item,
-        // Use the item's category if it exists, otherwise categorize it
-        category: item.category || categorizeItem(item.name),
-        receiptDate: receipt.date // Add receipt date for time-based analysis if needed
-      }))
-    );
-
-    // Get spending by category
-    const categorySpending = getCategorySpending(allItems);
-    
-    // Calculate tax and discount totals
-    const { tax, discount } = receipts.reduce((acc, receipt) => {
-      acc.tax += receipt.tax_amount || 0;
-      acc.discount += receipt.discount_amount || 0;
-      return acc;
-    }, { tax: 0, discount: 0 });
-    
-    // Map to PieChartData format with consistent colors
-    const categoryData = categorySpending.map(({ category, amount }) => ({
-      name: category,
-      value: parseFloat(amount.toFixed(2)),
-      color: {
-        'Food': '#10b981',        // emerald-500
-        'Utilities': '#3b82f6',   // blue-500
-        'Shopping': '#8b5cf6',    // violet-500
-        'Transportation': '#f59e0b', // amber-500
-        'Entertainment': '#ec4899', // pink-500
-        'Healthcare': '#6366f1',   // indigo-500
-        'Others': '#6b7280'        // gray-500
-      }[category] || '#9ca3af'     // gray-400 as fallback
-    }));
-      
-    return {
-      totalTax: Math.round(tax * 100) / 100, // Round to 2 decimal places
-      totalDiscount: Math.round(discount * 100) / 100,
-      categoryData
-    };
-  }, [receipts]);
+  // Replace the categoryData calculation in your useMemo (around lines 45-85)
+const { totalTax, totalDiscount, categoryData } = useMemo(() => {
+  if (!receipts.length) return { 
+    totalTax: 0, 
+    totalDiscount: 0, 
+    categoryData: [] as PieChartData[] 
+  };
   
+  // Extract all items from receipts and calculate category totals
+  const categoryTotals: Record<string, number> = {};
+  
+  receipts.forEach(receipt => {
+    // First try to get the category from the receipt itself
+    // If not available, try to determine it from items
+    let category = receipt.category;
+    
+    if (!category && receipt.items && receipt.items.length > 0) {
+      // Try to get category from items if not set at receipt level
+      const itemCategories = new Set<string>();
+      receipt.items.forEach(item => {
+        const itemCategory = item.category || categorizeItem(item.name);
+        if (itemCategory) {
+          itemCategories.add(itemCategory);
+        }
+      });
+      
+      // If all items have the same category, use that
+      if (itemCategories.size === 1) {
+        category = Array.from(itemCategories)[0];
+      }
+    }
+    
+    // Default to 'Others' if no category could be determined
+    const finalCategory = category || 'Others';
+    
+    // Use the receipt's total_amount for the category total
+    categoryTotals[finalCategory] = (categoryTotals[finalCategory] || 0) + (receipt.total_amount || 0);
+    
+    console.log(`Receipt total: ${receipt.total_amount}, Category: ${finalCategory}`);
+  });
+  
+  console.log('Final category totals:', categoryTotals);
+
+  // Calculate tax and discount totals
+  const { tax, discount } = receipts.reduce((acc, receipt) => {
+    acc.tax += receipt.tax_amount || 0;
+    acc.discount += receipt.discount_amount || 0;
+    return acc;
+  }, { tax: 0, discount: 0 });
+  
+  // Map to PieChartData format with consistent colors
+  const categoryData = Object.entries(categoryTotals).map(([category, amount]) => ({
+    name: category,
+    value: parseFloat(amount.toFixed(2)),
+    color: {
+      'Food': '#10b981',        // emerald-500
+      'Groceries': '#10b981',   // same as Food for consistency
+      'Utilities': '#3b82f6',   // blue-500
+      'Shopping': '#8b5cf6',    // violet-500
+      'Transportation': '#f59e0b', // amber-500
+      'Entertainment': '#ec4899', // pink-500
+      'Healthcare': '#6366f1',   // indigo-500
+      'Others': '#6b7280'        // gray-500
+    }[category] || '#9ca3af'     // gray-400 as fallback
+  }));
+    
+  return {
+    totalTax: Math.round(tax * 100) / 100,
+    totalDiscount: Math.round(discount * 100) / 100,
+    categoryData
+  };
+}, [receipts]);
   // Calculate summary stats and insights
   const { 
     totalSpent, 

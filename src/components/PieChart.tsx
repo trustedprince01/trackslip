@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 const COLORS = [
   '#3b82f6', // blue-500
@@ -65,13 +66,10 @@ export const PieChart: React.FC<PieChartProps> = ({ data, loading = false }) => 
             ))}
           </Pie>
           <Tooltip 
-            formatter={(value: number) => [
-              new Intl.NumberFormat('en-US', { 
-                style: 'currency', 
-                currency: 'NGN' 
-              }).format(Number(value)),
-              'Spent'
-            ]}
+            formatter={(value: number) => {
+              const { formatCurrency } = useCurrency();
+              return [formatCurrency(Number(value)), 'Spent'];
+            }}
           />
           <Legend 
             layout="horizontal" 
