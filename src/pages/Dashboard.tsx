@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Home, History, Settings, Plus, Search, ArrowDown, Receipt, ShoppingBag, PieChart as PieChartIcon, Target } from "lucide-react";
+import { Home, History, Settings, Plus, Search, ArrowDown, Receipt, ShoppingBag, PieChart as PieChartIcon, BarChart } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SpendingChart } from "@/components/SpendingChart";
 import { PieChart } from "@/components/PieChart";
@@ -311,7 +311,7 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
   };
 
   const handleSmartBudgetingClick = () => {
-    navigate('/smart-budgeting');
+    navigate('/insights');
   };
 
   const handleHistoryClick = () => {
@@ -616,8 +616,8 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
               className="h-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-xl flex-1 mx-1"
               onClick={handleSmartBudgetingClick}
             >
-              <Target size={20} />
-              <span className="text-xs mt-1">Budget</span>
+              <BarChart size={20} />
+              <span className="text-xs mt-1">Insights</span>
             </Button>
             
             <Button 
