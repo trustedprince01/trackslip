@@ -141,7 +141,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   return (
     <Card className="bg-white/60 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30 rounded-2xl shadow-lg">
       <CardContent className="p-4">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-start space-x-4">
           {/* Avatar Section */}
           <div className="relative group flex-shrink-0">
             <Avatar className="h-12 w-12 text-lg font-bold shadow-lg">
@@ -175,54 +175,64 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           {/* Profile Info Section */}
           <div className="flex-1 min-w-0">
             {isEditing ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div>
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Username</label>
                   <Input
                     value={editData.username}
                     onChange={(e) => setEditData(prev => ({ ...prev, username: e.target.value }))}
-                    className="h-7 text-xs"
+                    className="h-8 text-sm"
                     placeholder="Enter username"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Full Name</label>
-                  <Input
-                    value={editData.full_name}
-                    onChange={(e) => setEditData(prev => ({ ...prev, full_name: e.target.value }))}
-                    className="h-7 text-xs"
-                    placeholder="Enter full name"
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Full Name</label>
+                    <Input
+                      value={editData.full_name}
+                      onChange={(e) => setEditData(prev => ({ ...prev, full_name: e.target.value }))}
+                      className="h-8 text-sm"
+                      placeholder="Enter full name"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Phone</label>
+                    <Input
+                      value={editData.phone}
+                      onChange={(e) => setEditData(prev => ({ ...prev, phone: e.target.value }))}
+                      className="h-8 text-sm"
+                      placeholder="Enter phone"
+                      type="tel"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Phone</label>
-                  <Input
-                    value={editData.phone}
-                    onChange={(e) => setEditData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="h-7 text-xs"
-                    placeholder="Enter phone number"
-                    type="tel"
-                  />
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Email</label>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 p-2 bg-gray-100 dark:bg-gray-700 rounded border">
+                    {user?.email || 'No email available'}
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <div>
                   <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Username</div>
                   <div className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
                     @{getDisplayUsername()}
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Full Name</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Full Name</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Phone</div>
-                  <div className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                    {profile?.phone || 'Not provided'}
+                  <div>
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Phone</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                      {profile?.phone || 'Not provided'}
+                    </div>
                   </div>
                 </div>
                 <div>

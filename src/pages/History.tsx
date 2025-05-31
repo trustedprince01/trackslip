@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -224,8 +223,8 @@ const History = () => {
                   <CardContent className="p-6">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="relative">
+                      <div className="flex items-center space-x-4 min-w-0 flex-1">
+                        <div className="relative flex-shrink-0">
                           <div className={`h-16 w-16 rounded-2xl bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border border-white/30 dark:border-gray-700/30 flex items-center justify-center overflow-hidden`}>
                             {loadingLogos[receipt.store_name || ''] ? (
                               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -251,9 +250,6 @@ const History = () => {
                             ) : (
                               <Store className="h-8 w-8 text-gray-600 dark:text-gray-400" />
                             )}
-                            <div className="h-16 w-16 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm border border-white/30 dark:border-gray-700/30 rounded-2xl hidden items-center justify-center">
-                              <Store className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-                            </div>
                           </div>
                           <div className={`absolute -bottom-1 -right-1 w-5 h-5 ${storeColors.accent} rounded-full flex items-center justify-center`}>
                             <Receipt className="h-3 w-3 text-white" />
@@ -264,16 +260,16 @@ const History = () => {
                             {receipt.store_name || 'Unknown Store'}
                           </h3>
                           <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 space-x-2 mt-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>{format(new Date(receipt.date), 'MMM d, yyyy')}</span>
+                            <Calendar className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{format(new Date(receipt.date), 'MMM d, yyyy')}</span>
                             <span className="text-gray-400 dark:text-gray-600">•</span>
-                            <span>{receipt.items?.length || 0} items</span>
+                            <span className="flex-shrink-0">{receipt.items?.length || 0} items</span>
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/20 dark:border-gray-700/20">
-                          <div className="text-xl font-bold text-gray-900 dark:text-white">
+                      <div className="flex-shrink-0 ml-2">
+                        <div className="bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm px-3 py-2 rounded-xl border border-white/20 dark:border-gray-700/20">
+                          <div className="text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">
                             {formatCurrency(receipt.total_amount || 0)}
                           </div>
                         </div>

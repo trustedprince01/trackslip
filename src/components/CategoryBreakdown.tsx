@@ -27,17 +27,17 @@ export const CategoryBreakdown = () => {
         </button>
       </div>
       
-      <div className="flex items-center gap-8">
+      <div className="flex flex-col lg:flex-row items-center gap-6">
         {/* Chart Container */}
-        <div className="flex-1 max-w-[200px]">
-          <ResponsiveContainer width="100%" height={200}>
+        <div className="w-full max-w-[180px] mx-auto lg:mx-0">
+          <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={50}
-                outerRadius={80}
+                innerRadius={45}
+                outerRadius={75}
                 paddingAngle={2}
                 dataKey="value"
               >
@@ -59,19 +59,21 @@ export const CategoryBreakdown = () => {
         </div>
         
         {/* Legend */}
-        <div className="flex-1 space-y-3">
-          {data.map((item, index) => (
-            <div key={index} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div 
-                  className="w-3 h-3 rounded-full" 
-                  style={{ backgroundColor: item.color }} 
-                />
-                <span className="text-sm text-gray-300">{item.name}</span>
+        <div className="flex-1 w-full">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:gap-3">
+            {data.map((item, index) => (
+              <div key={index} className="flex items-center justify-between min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div 
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: item.color }} 
+                  />
+                  <span className="text-xs lg:text-sm text-gray-300 truncate">{item.name}</span>
+                </div>
+                <span className="text-xs lg:text-sm font-medium text-white ml-2 flex-shrink-0">{item.value}%</span>
               </div>
-              <span className="text-sm font-medium text-white">{item.value}%</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
