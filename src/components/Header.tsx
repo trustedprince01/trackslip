@@ -31,7 +31,38 @@ const Header = () => {
       <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
         <div className="flex items-center">
           <Link to="/" className="flex items-center space-x-2 text-white font-radio text-xl">
-            <img src="/placeholder.svg" alt="TrackSlip Logo" className="h-8 w-8" />
+            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" className="h-8 w-8">
+              <defs>
+                <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style={{stopColor: '#667eea'}}/>
+                  <stop offset="100%" style={{stopColor: '#764ba2'}}/>
+                </linearGradient>
+                <linearGradient id="receiptGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style={{stopColor: '#667eea'}}/>
+                  <stop offset="100%" style={{stopColor: '#764ba2'}}/>
+                </linearGradient>
+              </defs>
+              
+              {/* Background rounded rectangle */}
+              <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+              
+              {/* Receipt */}
+              <rect x="8" y="6" width="12" height="16" rx="2" fill="white" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5"/>
+              
+              {/* Receipt lines */}
+              <rect x="10" y="9" width="8" height="1" rx="0.5" fill="url(#receiptGrad)"/>
+              <rect x="10" y="11" width="6" height="0.8" rx="0.4" fill="#e0e0e0"/>
+              <rect x="10" y="13" width="7" height="0.8" rx="0.4" fill="#e0e0e0"/>
+              <rect x="10" y="15" width="5" height="0.8" rx="0.4" fill="#e0e0e0"/>
+              <rect x="10" y="17" width="8" height="1" rx="0.5" fill="url(#receiptGrad)"/>
+              
+              {/* Tracking pin icon */}
+              <circle cx="24" cy="10" r="4" fill="rgba(102,126,234,0.2)" stroke="rgba(255,255,255,0.6)" strokeWidth="1"/>
+              <circle cx="24" cy="10" r="1.5" fill="#667eea"/>
+              
+              {/* Scan line */}
+              <rect x="6" y="15" width="16" height="1" rx="0.5" fill="#005fff" opacity="0.8"/>
+            </svg>
             <span>Track<span className="text-trackslip-teal">Slip</span></span>
           </Link>
         </div>

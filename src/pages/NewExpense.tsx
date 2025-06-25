@@ -1,7 +1,6 @@
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Camera, Image, Info, Plus, FileText, Sparkles, ShieldCheck, Search, Download, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { ArrowLeft, Camera, Image, Info, Plus, FileText, Sparkles, ShieldCheck, Search, Download, CheckCircle2, AlertTriangle, X, Shield } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -76,8 +75,60 @@ const NewExpense = () => {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Cloudflare Turnstile verification state
+  const [isVerified, setIsVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  
   // Disable buttons when processing or uploading
   const isButtonDisabled = isProcessing || isUploading;
+
+  // Cloudflare Turnstile verification function
+  const verifyWithCloudflare = async (token: string) => {
+    setIsVerifying(true);
+    try {
+      // Send token to your backend for verification
+      const response = await fetch('https://jnyenduarslgfkfawtsy.supabase.co/functions/v1/verify-turnstile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Verification failed');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setIsVerified(true);
+        setTurnstileToken(token);
+        toast.success('Verification successful! You can now scan receipts.');
+      } else {
+        throw new Error('Verification failed');
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      toast.error('Verification failed. Please try again.');
+      setIsVerified(false);
+      setTurnstileToken(null);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Handle Turnstile widget callback
+  const handleTurnstileCallback = (token: string) => {
+    verifyWithCloudflare(token);
+  };
+
+  // Handle Turnstile widget expiry
+  const handleTurnstileExpiry = () => {
+    setIsVerified(false);
+    setTurnstileToken(null);
+    toast.error('Verification expired. Please verify again.');
+  };
 
   const onDrop = (acceptedFiles: File[]) => {
     if (!acceptedFiles.length || isButtonDisabled) return;
@@ -157,6 +208,12 @@ const NewExpense = () => {
 
   const processReceipt = async () => {
     if (!user || !images.length || isButtonDisabled) return;
+    
+    // Check if user is verified with Cloudflare Turnstile
+    if (!isVerified) {
+      toast.error('Please complete the verification before scanning receipts.');
+      return;
+    }
     
     setIsUploading(true);
     setIsProcessing(true);
@@ -256,68 +313,113 @@ const NewExpense = () => {
     navigate("/dashboard");
   };
 
-  const renderEmptyState = () => (
-    <div 
-      {...getRootProps()}
-      className={`flex flex-col items-center justify-center py-16 px-6 text-center border-2 border-dashed rounded-lg m-4 cursor-pointer transition-colors ${
-        isDragActive ? 'border-primary bg-primary/10' : 'border-gray-700 hover:border-primary/50 hover:bg-primary/5'
-      }`}
-    >
-      <input {...getInputProps()} />
-      <div className="h-16 w-16 mb-6 text-gray-400">
-        {isDragActive ? <FileText size={64} /> : <FileText size={64} />}
+  const renderVerificationStep = () => (
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="h-16 w-16 mb-6 text-blue-400">
+        <Shield size={64} />
       </div>
       <h2 className="text-xl font-semibold text-gray-100 mb-2">
-        {isDragActive ? 'Drop your receipt here' : 'Select a Receipt Image'}
+        Verify Before Scanning
       </h2>
-      <p className="text-gray-400 text-sm mb-4">
-        Drag & drop your receipt here, or click to select
-      </p>
-      <div className="flex gap-3">
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleCameraCapture();
-          }}
-          disabled={isButtonDisabled}
-        >
-          <Camera className="mr-2 h-4 w-4" />
-          Take Photo
-        </Button>
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            fileInputRef.current?.click();
-          }}
-          disabled={isButtonDisabled}
-        >
-          <Image className="mr-2 h-4 w-4" />
-          Choose File
-        </Button>
-      </div>
-      <p className="text-xs text-gray-500 mt-4">
-        Supported formats: JPG, PNG, WEBP (max 5MB)
+      <p className="text-gray-400 text-sm mb-6 max-w-md">
+        Please complete the verification below to ensure you're not a bot before scanning receipts.
       </p>
       
-      {/* Hidden file input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileInputChange}
-        onClick={(e) => {
-          // Prevent the click from bubbling up to parent elements
-          e.stopPropagation();
-        }}
-        accept="image/*"
-        multiple
-        className="hidden"
-      />
+      {isVerifying ? (
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
+          <span className="text-gray-400">Verifying...</span>
+        </div>
+      ) : isVerified ? (
+        <div className="flex items-center gap-3 text-green-400">
+          <CheckCircle2 className="h-5 w-5" />
+          <span>Verified! You can now scan receipts.</span>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Cloudflare Turnstile Widget */}
+          <div 
+            className="cf-turnstile" 
+            data-sitekey="0x4AAAAAABibNND4D4q-jafIu0L33W3AQ04"
+            data-callback={handleTurnstileCallback}
+            data-expired-callback={handleTurnstileExpiry}
+          />
+          <p className="text-xs text-gray-500">
+            This helps us prevent abuse and ensure fair usage for all users.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderEmptyState = () => (
+    <div className="m-4">
+      {!isVerified ? (
+        renderVerificationStep()
+      ) : (
+        <div 
+          {...getRootProps()}
+          className={`flex flex-col items-center justify-center py-16 px-6 text-center border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+            isDragActive ? 'border-primary bg-primary/10' : 'border-gray-700 hover:border-primary/50 hover:bg-primary/5'
+          }`}
+        >
+          <input {...getInputProps()} />
+          <div className="h-16 w-16 mb-6 text-gray-400">
+            {isDragActive ? <FileText size={64} /> : <FileText size={64} />}
+          </div>
+          <h2 className="text-xl font-semibold text-gray-100 mb-2">
+            {isDragActive ? 'Drop your receipt here' : 'Select a Receipt Image'}
+          </h2>
+          <p className="text-gray-400 text-sm mb-4">
+            Drag & drop your receipt here, or click to select
+          </p>
+          <div className="flex gap-3">
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCameraCapture();
+              }}
+              disabled={isButtonDisabled}
+            >
+              <Camera className="mr-2 h-4 w-4" />
+              Take Photo
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+              disabled={isButtonDisabled}
+            >
+              <Image className="mr-2 h-4 w-4" />
+              Choose File
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500 mt-4">
+            Supported formats: JPG, PNG, WEBP (max 5MB)
+          </p>
+          
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileInputChange}
+            onClick={(e) => {
+              // Prevent the click from bubbling up to parent elements
+              e.stopPropagation();
+            }}
+            accept="image/*"
+            multiple
+            className="hidden"
+          />
+        </div>
+      )}
     </div>
   );
 
