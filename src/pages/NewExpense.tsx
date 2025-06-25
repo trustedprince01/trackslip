@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDropzone } from "react-dropzone";
 import { useReceipts } from "@/hooks/useReceipts";
 import { Loader2 } from "lucide-react";
+import Turnstile from 'react-turnstile';
 
 type ProcessingStep = {
   id: string;
@@ -337,12 +338,10 @@ const NewExpense = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Cloudflare Turnstile Widget */}
-          <div 
-            className="cf-turnstile" 
-            data-sitekey="0x4AAAAAABibNND4D4q-jafIu0L33W3AQ04"
-            data-callback={handleTurnstileCallback}
-            data-expired-callback={handleTurnstileExpiry}
+          <Turnstile
+            sitekey="0x4AAAAAABibNK26za22hVvX"
+            onSuccess={handleTurnstileCallback}
+            onExpire={handleTurnstileExpiry}
           />
           <p className="text-xs text-gray-500">
             This helps us prevent abuse and ensure fair usage for all users.
