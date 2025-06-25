@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   editData,
   setEditData
 }) => {
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -98,6 +97,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
         full_name: editData.full_name,
         phone: editData.phone 
       });
+      await refreshProfile();
       setIsEditing(false);
       toast({
         title: "Success",
@@ -117,7 +117,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
     setIsEditing(false);
     if (profile) {
       setEditData({
-        username: profile.full_name?.toLowerCase().replace(/\s+/g, '') || user?.email?.split('@')[0] || '',
+        username: profile.username || user?.email?.split('@')[0] || '',
         full_name: profile.full_name || user?.email?.split('@')[0] || '',
         phone: profile.phone || ''
       });
@@ -135,7 +135,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   };
 
   const getDisplayUsername = () => {
-    return profile?.full_name?.toLowerCase().replace(/\s+/g, '') || user?.email?.split('@')[0] || 'user';
+    return profile?.username || user?.email?.split('@')[0] || 'user';
   };
 
   return (

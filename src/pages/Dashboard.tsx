@@ -26,6 +26,32 @@ type Receipt = {
   items?: Array<{ id: string; name: string; price: number; quantity: number }>;
 };
 
+function normalizeCategory(category: string | undefined): Category {
+  if (!category) return 'Others';
+  const cat = category.trim().toLowerCase();
+  if (cat === 'food' || cat === 'foods') return 'Food';
+  if (cat === 'groceries' || cat === 'grocery') return 'Groceries';
+  if (cat === 'dining' || cat === 'restaurant') return 'Dining';
+  if (cat === 'entertainment') return 'Entertainment';
+  if (cat === 'health' || cat === 'healthcare') return 'Health';
+  if (cat === 'bills' || cat === 'utilities' || cat === 'utility') return 'Bills';
+  if (cat === 'transportation' || cat === 'transport') return 'Transportation';
+  if (cat === 'shopping') return 'Shopping';
+  if (cat === 'travel') return 'Travel';
+  if (cat === 'education') return 'Education';
+  if (cat === 'home') return 'Home';
+  if (cat === 'personal care') return 'Personal Care';
+  if (cat === 'gifts') return 'Gifts';
+  // fallback to your allowed categories
+  const allowed: Category[] = [
+    'Food', 'Groceries', 'Dining', 'Transportation', 'Shopping', 'Bills',
+    'Health', 'Entertainment', 'Travel', 'Education', 'Home',
+    'Personal Care', 'Gifts', 'Others'
+  ];
+  const found = allowed.find(c => c.toLowerCase() === cat);
+  return found || 'Others';
+}
+
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState<boolean>(false);
@@ -60,30 +86,27 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
   receipts.forEach(receipt => {
     // First try to get the category from the receipt itself
     // If not available, try to determine it from items
-    let category = receipt.category;
-    
-    if (!category && receipt.items && receipt.items.length > 0) {
+    let category = normalizeCategory((receipt as any).category);
+    if ((!category || category === 'Others') && receipt.items && receipt.items.length > 0) {
       // Try to get category from items if not set at receipt level
       const itemCategories = new Set<string>();
       receipt.items.forEach(item => {
-        const itemCategory = item.category || categorizeItem(item.name);
+        const itemCategory = normalizeCategory(item.category) || categorizeItem(item.name);
         if (itemCategory) {
           itemCategories.add(itemCategory);
         }
       });
-      
       // If all items have the same category, use that
       if (itemCategories.size === 1) {
-        category = Array.from(itemCategories)[0];
+        category = normalizeCategory(Array.from(itemCategories)[0]);
+      } else if (itemCategories.size > 1) {
+        // If multiple categories, use the first one (or you can choose to group as 'Mixed')
+        category = normalizeCategory(Array.from(itemCategories)[0]);
       }
     }
-    
-    // Default to 'Others' if no category could be determined
-    const finalCategory = category || 'Others';
-    
-    // Use the receipt's total_amount for the category total
+    // Only use 'Others' if there is truly no valid category
+    const finalCategory = (category && category !== 'Others') ? category : 'Others';
     categoryTotals[finalCategory] = (categoryTotals[finalCategory] || 0) + (receipt.total_amount || 0);
-    
     console.log(`Receipt total: ${receipt.total_amount}, Category: ${finalCategory}`);
   });
   
@@ -101,15 +124,16 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
     name: category,
     value: parseFloat(amount.toFixed(2)),
     color: {
-      'Food': '#10b981',        // emerald-500
-      'Groceries': '#10b981',   // same as Food for consistency
-      'Utilities': '#3b82f6',   // blue-500
-      'Shopping': '#8b5cf6',    // violet-500
+      'Food': '#22c55e',         // green-500
+      'Groceries': '#10b981',    // emerald-500
+      'Dining': '#f59e42',       // orange-400
+      'Utilities': '#3b82f6',    // blue-500
+      'Shopping': '#8b5cf6',     // violet-500
       'Transportation': '#f59e0b', // amber-500
       'Entertainment': '#ec4899', // pink-500
       'Healthcare': '#6366f1',   // indigo-500
       'Others': '#6b7280'        // gray-500
-    }[category] || '#9ca3af'     // gray-400 as fallback
+    }[category as Category] || '#9ca3af',
   }));
     
   return {
@@ -154,26 +178,26 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
       // If receipt has items with categories, use those
       if (receipt.items && receipt.items.length > 0) {
         receipt.items.forEach(item => {
-          const category = item.category || 'Uncategorized';
+          const category = normalizeCategory(item.category) || 'Uncategorized';
           acc[category] = (acc[category] || 0) + (item.price * (item.quantity || 1));
         });
       } else {
         // Fallback to receipt-level category if no items
-        const category = receipt.category || 'Uncategorized';
+        const category = normalizeCategory((receipt as any).category) || 'Uncategorized';
         acc[category] = (acc[category] || 0) + (receipt.total_amount || 0);
       }
       return acc;
     }, {} as Record<string, number>);
     
     // Calculate total for percentage calculation
-    const categoryTotal = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0) || 1;
+    const categoryTotal = Object.values(categoryTotals).reduce((sum, amount) => Number(sum) + Number(amount), 0) || 1;
     
     // Get top category
     const topCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
     const topCategory = topCategoryEntry ? {
       name: topCategoryEntry[0],
-      amount: topCategoryEntry[1],
-      percentage: Math.round((topCategoryEntry[1] / categoryTotal) * 100)
+      amount: Number(topCategoryEntry[1]),
+      percentage: Math.round((Number(topCategoryEntry[1]) / categoryTotal) * 100)
     } : null;
     
     // Calculate monthly spending
@@ -325,7 +349,7 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
         <header className="flex justify-between items-center p-6 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border-b border-gray-200/20 dark:border-gray-800/20">
           <div>
             <h1 className="text-2xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">Trackslip</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Welcome back, {profile?.full_name || user?.email?.split('@')[0] || 'User'} 👋</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Welcome back, {profile?.username || user?.email?.split('@')[0] || 'User'} 👋</p>
           </div>
           <Avatar 
             className="h-12 w-12 ring-2 ring-blue-500/20 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900 cursor-pointer"
@@ -399,7 +423,7 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-gray-600 dark:text-gray-400 text-xs">Tax Paid</span>
                   <div className="h-8 w-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                    <span className="text-yellow-500 text-xs font-bold">₦</span>
+                    <span className="text-yellow-500 text-xs font-bold">💸</span>
                   </div>
                 </div>
                 <p className="text-xl font-semibold text-yellow-500">

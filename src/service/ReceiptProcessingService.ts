@@ -299,7 +299,7 @@ class ReceiptProcessingService {
 
     // All valid categories from the Receipt type
     const validCategories: Category[] = [
-      'Groceries', 'Dining', 'Transportation', 'Shopping', 'Bills',
+      'Food', 'Groceries', 'Dining', 'Transportation', 'Shopping', 'Bills',
       'Health', 'Entertainment', 'Travel', 'Education', 'Home',
       'Personal Care', 'Gifts', 'Others'
     ];

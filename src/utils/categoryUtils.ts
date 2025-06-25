@@ -1,4 +1,18 @@
-export type Category = 'Food' | 'Utilities' | 'Shopping' | 'Transportation' | 'Entertainment' | 'Healthcare' | 'Others';
+export type Category = 
+  | 'Food'           // General food, meals, snacks, etc.
+  | 'Groceries'      // Food items from supermarkets/grocery stores
+  | 'Dining'         // Restaurant meals, takeout, coffee shops
+  | 'Transportation' // Gas, public transit, parking, ride-sharing
+  | 'Shopping'       // Retail purchases, clothing, electronics
+  | 'Bills'          // Utilities, phone, internet, subscriptions
+  | 'Health'         // Pharmacy, medical expenses, fitness
+  | 'Entertainment'  // Movies, games, events, hobbies
+  | 'Travel'         // Flights, hotels, car rentals
+  | 'Education'      // Books, courses, school supplies
+  | 'Home'           // Furniture, appliances, home improvement
+  | 'Personal Care'  // Beauty, hygiene, salon services
+  | 'Gifts'          // Presents, donations, charity
+  | 'Others';        // Anything that doesn't fit above
 
 export interface CategorizedItem {
   name: string;
@@ -7,93 +21,114 @@ export interface CategorizedItem {
   category: Category;
 }
 
-export const itemCategories: { [key: string]: Category } = {
-  // Food & Groceries
-  'banana': 'Food',
-  'apple': 'Food',
-  'milk': 'Food',
-  'bread': 'Food',
-  'eggs': 'Food',
-  'meat': 'Food',
-  'chicken': 'Food',
-  'fish': 'Food',
-  'rice': 'Food',
-  'pasta': 'Food',
-  'vegetables': 'Food',
-  'fruits': 'Food',
-  'snacks': 'Food',
-  'beverages': 'Food',
-  'coffee': 'Food',
-  'tea': 'Food',
-  'restaurant': 'Food',
-  'takeout': 'Food',
-  'delivery': 'Food',
-  
-  // Utilities
-  'electricity': 'Utilities',
-  'water': 'Utilities',
-  'gas': 'Utilities',
-  'internet': 'Utilities',
-  'phone': 'Utilities',
-  'mobile': 'Utilities',
-  'cable': 'Utilities',
-  'tv': 'Utilities',
-  'streaming': 'Utilities',
-  
-  // Shopping
-  'clothing': 'Shopping',
-  'shoes': 'Shopping',
-  'electronics': 'Shopping',
-  'appliances': 'Shopping',
-  'furniture': 'Shopping',
-  'home': 'Shopping',
-  'decor': 'Shopping',
-  'beauty': 'Shopping',
-  'cosmetics': 'Shopping',
-  'accessories': 'Shopping',
-  
+// Updated keyword mapping for more accurate categorization
+const categoryMappings: { keywords: string[]; category: Category }[] = [
+  // Food (general)
+  {
+    keywords: [
+      'food', 'meal', 'snack', 'lunch', 'dinner', 'breakfast', 'brunch', 'supper', 'refreshment', 'cuisine', 'dish', 'plate', 'entree', 'main course', 'side dish', 'dessert', 'appetizer', 'beverage', 'drink', 'juice', 'soda', 'water', 'coffee', 'tea',
+    ],
+    category: 'Food',
+  },
+  // Groceries
+  {
+    keywords: [
+      'grocery', 'supermarket', 'market', 'food mart', 'convenience store',
+      'deli', 'butcher', 'bakery', 'produce', 'banana', 'apple', 'milk', 'bread', 'eggs', 'meat', 'chicken', 'fish', 'rice', 'pasta', 'vegetables', 'fruits', 'snacks', 'beverages', 'coffee', 'tea',
+    ],
+    category: 'Groceries',
+  },
+  // Dining
+  {
+    keywords: [
+      'restaurant', 'cafe', 'bistro', 'eatery', 'grill', 'pizzeria', 'sushi',
+      'bar & grill', 'diner', 'steakhouse', 'tavern', 'pub', 'bar',
+      'coffee shop', 'breakfast', 'brunch', 'lunch', 'dinner', 'food court',
+      'fast food', 'takeout', 'delivery',
+      // Common restaurant menu items
+      'spicy chicken wings', 'burger', 'fries', 'pizza', 'chapman', 'catfish', 'pepper soup', 'jollof', 'plantain', 'egg sauce', 'bolognese', 'nkwobi',
+    ],
+    category: 'Dining',
+  },
   // Transportation
-  'gasoline': 'Transportation',
-  'fuel': 'Transportation',
-  'public transport': 'Transportation',
-  'taxi': 'Transportation',
-  'uber': 'Transportation',
-  'lyft': 'Transportation',
-  'parking': 'Transportation',
-  'maintenance': 'Transportation',
-  'car wash': 'Transportation',
-  
+  {
+    keywords: [
+      'gasoline', 'fuel', 'public transport', 'taxi', 'uber', 'lyft', 'parking', 'maintenance', 'car wash', 'bus', 'train', 'subway', 'metro', 'toll', 'charging', 'petrol', 'diesel',
+    ],
+    category: 'Transportation',
+  },
+  // Shopping
+  {
+    keywords: [
+      'clothing', 'shoes', 'electronics', 'appliances', 'furniture', 'home', 'decor', 'beauty', 'cosmetics', 'accessories', 'store', 'shop', 'boutique', 'outlet', 'mall', 'department', 'apparel', 'footwear', 'gadget', 'home goods', 'hardware', 'diy',
+    ],
+    category: 'Shopping',
+  },
+  // Bills
+  {
+    keywords: [
+      'electricity', 'water', 'gas', 'internet', 'phone', 'mobile', 'cable', 'tv', 'streaming', 'bill', 'payment', 'utility', 'gas bill', 'subscription', 'membership', 'insurance', 'mortgage', 'rent', 'loan',
+    ],
+    category: 'Bills',
+  },
+  // Health
+  {
+    keywords: [
+      'pharmacy', 'medicine', 'doctor', 'hospital', 'dental', 'vision', 'insurance', 'drugstore', 'medical', 'clinic', 'healthcare', 'wellness', 'fitness', 'gym', 'vitamin', 'supplement', 'optical', 'hearing', 'prescription',
+    ],
+    category: 'Health',
+  },
   // Entertainment
-  'movie': 'Entertainment',
-  'cinema': 'Entertainment',
-  'game': 'Entertainment',
-  'concert': 'Entertainment',
-  'event': 'Entertainment',
-  'hobby': 'Entertainment',
-  'sports': 'Entertainment',
-  'gym': 'Entertainment',
-  'subscription': 'Entertainment',
-  
-  // Healthcare
-  'pharmacy': 'Healthcare',
-  'medicine': 'Healthcare',
-  'doctor': 'Healthcare',
-  'hospital': 'Healthcare',
-  'dental': 'Healthcare',
-  'vision': 'Healthcare',
-  'insurance': 'Healthcare',
-};
+  {
+    keywords: [
+      'movie', 'cinema', 'game', 'concert', 'event', 'hobby', 'sports', 'gym', 'subscription', 'theater', 'ticket', 'music', 'book', 'magazine', 'newspaper', 'streaming', 'gaming', 'arcade', 'amusement', 'park', 'museum',
+    ],
+    category: 'Entertainment',
+  },
+  // Travel
+  {
+    keywords: [
+      'flight', 'hotel', 'car rental', 'travel', 'trip', 'airbnb', 'booking', 'lodge', 'resort',
+    ],
+    category: 'Travel',
+  },
+  // Education
+  {
+    keywords: [
+      'school', 'university', 'college', 'course', 'class', 'training', 'workshop', 'seminar', 'bookstore', 'stationery', 'supplies', 'tuition', 'textbook', 'education',
+    ],
+    category: 'Education',
+  },
+  // Home
+  {
+    keywords: [
+      'home', 'garden', 'furniture', 'appliance', 'renovation', 'repair', 'maintenance', 'cleaning', 'lawn', 'landscaping', 'pest control', 'security', 'houseware', 'kitchen', 'bath', 'bedding',
+    ],
+    category: 'Home',
+  },
+  // Personal Care
+  {
+    keywords: [
+      'salon', 'barber', 'spa', 'massage', 'beauty', 'hair', 'nails', 'skincare', 'cosmetic', 'grooming', 'wellness', 'tattoo', 'piercing', 'toiletries', 'hygiene',
+    ],
+    category: 'Personal Care',
+  },
+  // Gifts
+  {
+    keywords: [
+      'gift', 'present', 'donation', 'charity', 'fundraiser', 'nonprofit', 'ngo', 'church', 'temple', 'mosque', 'synagogue', 'place of worship',
+    ],
+    category: 'Gifts',
+  },
+];
 
 export function categorizeItem(itemName: string): Category {
   const lowerName = itemName.toLowerCase();
-  
-  // Check for exact matches first
-  for (const [keyword, category] of Object.entries(itemCategories)) {
-    if (lowerName.includes(keyword)) {
+  for (const { keywords, category } of categoryMappings) {
+    if (keywords.some(keyword => lowerName.includes(keyword))) {
       return category;
     }
   }
-  
   return 'Others';
 }
 
@@ -106,13 +141,10 @@ export function categorizeItems(items: Array<{ name: string; price: number; quan
 
 export function getCategorySpending(categorizedItems: CategorizedItem[]) {
   const categoryTotals: { [key in Category]?: number } = {};
-  
   categorizedItems.forEach(item => {
     const currentTotal = categoryTotals[item.category] || 0;
     categoryTotals[item.category] = currentTotal + (item.price * item.quantity);
   });
-  
-  // Convert to array and sort by amount (descending)
   return Object.entries(categoryTotals)
     .map(([category, amount]) => ({
       category: category as Category,

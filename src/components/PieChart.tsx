@@ -47,8 +47,8 @@ export const PieChart: React.FC<PieChartProps> = ({ data, loading = false }) => 
   }
 
   return (
-    <div className="w-full h-64">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="w-full h-64 flex flex-col items-center justify-center">
+      <ResponsiveContainer width="100%" height="80%">
         <RechartsPieChart>
           <Pie
             data={data}
@@ -58,7 +58,6 @@ export const PieChart: React.FC<PieChartProps> = ({ data, loading = false }) => 
             outerRadius={80}
             paddingAngle={2}
             dataKey="value"
-            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
             labelLine={false}
           >
             {data.map((entry, index) => (
@@ -71,17 +70,19 @@ export const PieChart: React.FC<PieChartProps> = ({ data, loading = false }) => 
               return [formatCurrency(Number(value)), 'Spent'];
             }}
           />
-          <Legend 
-            layout="horizontal" 
-            verticalAlign="bottom" 
-            align="center"
-            wrapperStyle={{
-              paddingTop: '10px',
-              fontSize: '12px',
-            }}
-          />
         </RechartsPieChart>
       </ResponsiveContainer>
+      <div className="flex flex-wrap justify-center gap-4 mt-4 w-full">
+        {data.map((entry, index) => (
+          <div key={index} className="flex items-center space-x-2 mb-1">
+            <span
+              className="inline-block w-4 h-4 rounded"
+              style={{ backgroundColor: entry.color || COLORS[index % COLORS.length] }}
+            />
+            <span className="text-sm font-medium text-gray-200 whitespace-nowrap">{entry.name}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
