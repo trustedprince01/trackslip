@@ -49,8 +49,21 @@ class ReceiptProcessingService {
       console.log('Model initialized, creating prompt...');
       const prompt = `
       Analyze this receipt image and extract the following information in valid JSON format (without markdown code blocks):
-      IMPORTANT: If the receipt date is more than 30 days before today's date, or if the date is missing or unclear, use the current month and year for the date field (set the day to 1). For example, if today is June 27, 2025, and the receipt is from January 1, 2025, or the date is missing, set the date to 2025-06-01.
-      {
+
+      IMPORTANT DATE RULES:
+    - If the receipt date is missing or unclear, use today's full date (YYYY-MM-DD).
+    - If the receipt year is before the current year, use the current year.
+    - If the receipt month is greater than the current month, use the current month. Otherwise, keep the month from the receipt.
+    - For the day: If the receipt day is greater than today's day, use today's day. Otherwise, keep the day from the receipt.
+    - Always ensure the returned date is not in the future.
+
+    Examples:
+    - If the receipt says 2020-05-30 and today is 2025-06-26, set the date to 2025-05-26.
+    - If the receipt says 2025-07-11 and today is 2025-06-21, set the date to 2025-06-11.
+    - If the receipt says 2025-06-25 and today is 2025-06-21, set the date to 2025-06-21.
+    - If the receipt says 2025-05-30 and today is 2025-06-27, set the date to 2025-05-27.
+
+     {
         "storeName": "Exact name of the store/business",
         "totalAmount": 0.00, // Total amount paid (including tax and after discounts)
         "subtotal": 0.00,     // Amount before tax and after discounts
@@ -71,7 +84,6 @@ class ReceiptProcessingService {
           }
         ]
       }
-      
       CRITICAL RULES:
       1. Always return a valid JSON object with all fields, even if some are null
       2. For monetary values:
@@ -293,89 +305,138 @@ class ReceiptProcessingService {
  
 
   private async validateAndTransformReceiptData(data: any): Promise<Partial<Receipt>> {
-    // Basic validation
-    if (data.error) {
-      throw new Error(data.error);
-    }
-
-    // All valid categories from the Receipt type
-    const validCategories: Category[] = [
-      'Food', 'Groceries', 'Dining', 'Transportation', 'Shopping', 'Bills',
-      'Health', 'Entertainment', 'Travel', 'Education', 'Home',
-      'Personal Care', 'Gifts', 'Others'
-    ];
-    
-    // Calculate subtotal if not provided
-    const totalAmount = typeof data.totalAmount === 'number' ? data.totalAmount : 0;
-    const taxAmount = typeof data.taxAmount === 'number' ? data.taxAmount : 0;
-    const discountAmount = typeof data.discountAmount === 'number' ? data.discountAmount : 0;
-    
-    // Format date and time
-    const receiptDate = data.date || new Date().toISOString().split('T')[0];
-    const receiptTime = data.time || null;
-
-    // Transform the data to match our Receipt type
-    const receipt: Partial<Receipt> = {
-      store_name: data.storeName?.trim() || 'Unknown Store',
-      total_amount: totalAmount,
-      subtotal: data.subtotal || (totalAmount - taxAmount + discountAmount),
-      tax_amount: taxAmount,
-      discount_amount: discountAmount,
-      payment_method: data.paymentMethod?.trim(),
-      receipt_number: data.receiptNumber?.toString(),
-      date: receiptDate,
-      time: receiptTime,
-      items: (data.items || []).map((item: any) => {
-        // First, try to use the provided category if it's valid
-        let category: Category = 'Others';
-        if (item.category) {
-          const normalizedCategory = item.category.trim();
-          if (validCategories.includes(normalizedCategory as Category)) {
-            category = normalizedCategory as Category;
-          } else {
-            // Try to match the beginning of the category name
-            const matchedCategory = validCategories.find(cat => 
-              normalizedCategory.toLowerCase().startsWith(cat.toLowerCase())
-            );
-            if (matchedCategory) {
-              category = matchedCategory;
-            } else {
-              // If the provided category isn't valid, try to determine a better one
-              category = this.getSpecificCategory(item.name || '', data.storeName || '');
-            }
-          }
-        } else {
-          // If no category is provided, determine it based on item name and store
-          category = this.getSpecificCategory(item.name || '', data.storeName || '');
-        }
-        
-        // Calculate unit price if not provided
-        const quantity = Math.max(1, Number(item.quantity) || 1);
-        const price = Number(item.price) || 0;
-        const unitPrice = typeof item.unitPrice === 'number' 
-          ? item.unitPrice 
-          : price / quantity;
-        
-        return {
-          name: item.name?.trim() || 'Unknown Item',
-          price: price,
-          unit_price: unitPrice,
-          quantity: quantity,
-          category: category,
-          description: item.description?.trim()
-        };
-      }),
-    };
-
-    // If no items have categories, try to categorize them based on names
-    if (receipt.items && receipt.items.every(item => !item.category)) {
-      const { categorizeItems } = await import('@/utils/categoryUtils');
-      const categorizedItems = categorizeItems(receipt.items);
-      receipt.items = categorizedItems;
-    }
-
-    return receipt;
+  // Basic validation
+  if (data.error) {
+    throw new Error(data.error);
   }
+
+  // All valid categories from the Receipt type
+  const validCategories: Category[] = [
+    'Food', 'Groceries', 'Dining', 'Transportation', 'Shopping', 'Bills',
+    'Health', 'Entertainment', 'Travel', 'Education', 'Home',
+    'Personal Care', 'Gifts', 'Others'
+  ];
+  
+  // Calculate subtotal if not provided
+  const totalAmount = typeof data.totalAmount === 'number' ? data.totalAmount : 0;
+  const taxAmount = typeof data.taxAmount === 'number' ? data.taxAmount : 0;
+  const discountAmount = typeof data.discountAmount === 'number' ? data.discountAmount : 0;
+
+  // --- CORRECTED Date normalization logic ---
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11, so add 1
+  const currentDay = now.getDate();
+  
+  let receiptDate: Date | null = null;
+  let useCurrentDate = false;
+
+  if (data.date) {
+    const [year, month, day] = data.date.split('-').map(Number);
+    
+    if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+      // Apply the prompt rules independently:
+      
+      // Rule 1: If receipt year is before current year, use current year
+      const useYear = year < currentYear ? currentYear : year;
+      
+      // Rule 2: If receipt month is greater than current month, use current month. Otherwise, keep receipt month.
+      const useMonth = month > currentMonth ? currentMonth : month;
+      
+      // Rule 3: If receipt day is greater than today's day, use today's day. Otherwise, keep receipt day.
+      const useDay = day > currentDay ? currentDay : day;
+      
+      // Create the date (month needs to be 0-based for Date constructor)
+      receiptDate = new Date(useYear, useMonth - 1, useDay);
+      
+      // Final safety check: Ensure the date is not in the future
+      if (receiptDate > now) {
+        receiptDate = new Date(currentYear, now.getMonth(), currentDay);
+      }
+      
+      console.log(`Date transformation: ${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} → ${useYear}-${useMonth.toString().padStart(2, '0')}-${useDay.toString().padStart(2, '0')}`);
+      
+    } else {
+      console.log('Invalid date format, using current date');
+      useCurrentDate = true;
+    }
+  } else {
+    console.log('No date provided, using current date');
+    useCurrentDate = true;
+  }
+
+  if (useCurrentDate || !receiptDate) {
+    receiptDate = now;
+  }
+
+  // Format as YYYY-MM-DD
+  const formattedDate = receiptDate.toISOString().split('T')[0];
+
+  // Format time
+  const receiptTime = data.time || null;
+
+  // Transform the data to match our Receipt type
+  const receipt: Partial<Receipt> = {
+    store_name: data.storeName?.trim() || 'Unknown Store',
+    total_amount: totalAmount,
+    subtotal: data.subtotal || (totalAmount - taxAmount + discountAmount),
+    tax_amount: taxAmount,
+    discount_amount: discountAmount,
+    payment_method: data.paymentMethod?.trim(),
+    receipt_number: data.receiptNumber?.toString(),
+    date: formattedDate,
+    time: receiptTime,
+    items: (data.items || []).map((item: any) => {
+      // First, try to use the provided category if it's valid
+      let category: Category = 'Others';
+      if (item.category) {
+        const normalizedCategory = item.category.trim();
+        if (validCategories.includes(normalizedCategory as Category)) {
+          category = normalizedCategory as Category;
+        } else {
+          // Try to match the beginning of the category name
+          const matchedCategory = validCategories.find(cat => 
+            normalizedCategory.toLowerCase().startsWith(cat.toLowerCase())
+          );
+          if (matchedCategory) {
+            category = matchedCategory;
+          } else {
+            // If the provided category isn't valid, try to determine a better one
+            category = this.getSpecificCategory(item.name || '', data.storeName || '');
+          }
+        }
+      } else {
+        // If no category is provided, determine it based on item name and store
+        category = this.getSpecificCategory(item.name || '', data.storeName || '');
+      }
+      
+      // Calculate unit price if not provided
+      const quantity = Math.max(1, Number(item.quantity) || 1);
+      const price = Number(item.price) || 0;
+      const unitPrice = typeof item.unitPrice === 'number' 
+        ? item.unitPrice 
+        : price / quantity;
+      
+      return {
+        name: item.name?.trim() || 'Unknown Item',
+        price: price,
+        unit_price: unitPrice,
+        quantity: quantity,
+        category: category,
+        description: item.description?.trim()
+      };
+    }),
+  };
+
+  // If no items have categories, try to categorize them based on names
+  if (receipt.items && receipt.items.every(item => !item.category)) {
+    const { categorizeItems } = await import('@/utils/categoryUtils');
+    const categorizedItems = categorizeItems(receipt.items);
+    receipt.items = categorizedItems;
+  }
+
+  return receipt;
+}
 
   private fileToBase64(file: File): Promise<string> {
     console.log('Starting file to base64 conversion for file:', file.name);
