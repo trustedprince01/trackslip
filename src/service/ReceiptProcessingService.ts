@@ -49,6 +49,7 @@ class ReceiptProcessingService {
       console.log('Model initialized, creating prompt...');
       const prompt = `
       Analyze this receipt image and extract the following information in valid JSON format (without markdown code blocks):
+      IMPORTANT: If the receipt date is more than 30 days before today's date, or if the date is missing or unclear, use the current month and year for the date field (set the day to 1). For example, if today is June 27, 2025, and the receipt is from January 1, 2025, or the date is missing, set the date to 2025-06-01.
       {
         "storeName": "Exact name of the store/business",
         "totalAmount": 0.00, // Total amount paid (including tax and after discounts)

@@ -166,13 +166,13 @@ const Header = () => {
             >
               Features
             </Link>
-            <Link 
+            {/* <Link 
               to="#pricing" 
               className="text-white/90 hover:text-white font-radio text-sm py-2 block" 
               onClick={() => setMobileMenuOpen(false)}
             >
               Pricing
-            </Link>
+            </Link> */}
             <div className="border-t border-white/10 pt-4 flex flex-col space-y-3">
               <Button 
                 variant="ghost" 
