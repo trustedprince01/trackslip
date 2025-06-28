@@ -212,6 +212,8 @@ export const getAIRecommendation = async (
   
   const prompt = `You are an expert financial advisor with deep knowledge in expense optimization and smart shopping strategies. 
 Analyze the following spending in the **${category}** category and provide specific, actionable recommendations.
+YOUR REPLY SHOULD BE UNDESTANDABLE TO ANYONE USE SIMPLE SENTENCE TO AVOID CONFUSION
+YOUR REPLY SHOULD HAVE HUMOUR AND ENEGAGING 
 
 ### SPENDING SUMMARY
 - **Total spent:** ${formatCurrency(totalSpent)}

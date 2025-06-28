@@ -131,22 +131,28 @@ const Insights = () => {
     });
 
     // Calculate monthly spending and current month's savings
+    const now = new Date();
+    const currentMonth = now.getMonth(); // number (0-11)
+    const currentYear = now.getFullYear(); // number
     const monthlySpending = processedReceipts.reduce((acc, receipt) => {
       if (!receipt.date) return acc;
-      const month = new Date(receipt.date).toLocaleString('default', { month: 'short' });
-      acc[month] = (acc[month] || 0) + (receipt.total_amount || 0);
+      const dateObj = new Date(receipt.date);
+      const month = dateObj.getMonth();
+      const year = dateObj.getFullYear();
+      if (year === currentYear) {
+        const monthName = dateObj.toLocaleString('default', { month: 'short' });
+        acc[monthName] = (acc[monthName] || 0) + (receipt.total_amount || 0);
+      }
       return acc;
     }, {} as Record<string, number>);
     
     // Calculate current month's savings (total discounts for current month)
-    const currentMonth = new Date().toLocaleString('default', { month: 'short' });
-    const currentYear = new Date().getFullYear();
     const currentMonthSavings = processedReceipts
       .filter(receipt => {
         if (!receipt.date) return false;
         const receiptDate = new Date(receipt.date);
         return (
-          receiptDate.getMonth() === new Date().getMonth() &&
+          receiptDate.getMonth() === currentMonth &&
           receiptDate.getFullYear() === currentYear &&
           receipt.discount_amount && receipt.discount_amount > 0
         );
@@ -154,19 +160,29 @@ const Insights = () => {
       .reduce((sum, receipt) => sum + (receipt.discount_amount || 0), 0);
     
     // Calculate monthly trend (comparing current month to previous month)
-    const months = Object.keys(monthlySpending).sort();
+    const months = Object.keys(monthlySpending);
     let monthlyTrend = 0;
     if (months.length >= 2) {
-      const currentMonth = months[months.length - 1];
-      const prevMonth = months[months.length - 2];
-      const currentTotal = monthlySpending[currentMonth];
-      const prevTotal = monthlySpending[prevMonth];
-      monthlyTrend = prevTotal ? Math.round(((currentTotal - prevTotal) / prevTotal) * 100) : 0;
+      // Find the current and previous month names in correct order
+      const sortedMonths = months.map(m => {
+        // Convert month short name to month index (0-11)
+        return {
+          name: m,
+          index: new Date(`${m} 1, ${currentYear}`).getMonth()
+        };
+      }).sort((a, b) => a.index - b.index);
+      const currentMonthName = now.toLocaleString('default', { month: 'short' });
+      const currentMonthIdx = sortedMonths.findIndex(m => m.name === currentMonthName);
+      if (currentMonthIdx > 0) {
+        const prevMonthName = sortedMonths[currentMonthIdx - 1].name;
+        const currentTotal = monthlySpending[currentMonthName];
+        const prevTotal = monthlySpending[prevMonthName];
+        monthlyTrend = prevTotal ? Math.round(((currentTotal - prevTotal) / prevTotal) * 100) : 0;
+      }
     }
     
     // Get current date for calculations
-    const currentDate = new Date();
-    const currentMonthName = currentDate.toLocaleString('default', { month: 'short' });
+    const currentMonthName = now.toLocaleString('default', { month: 'short' });
     const currentMonthSpending = monthlySpending[currentMonthName] || 0;
 
     // Calculate weekly spending trend
@@ -198,16 +214,14 @@ const Insights = () => {
       ? Math.round(((thisWeekSpending - lastWeekSpending) / lastWeekSpending) * 100)
       : 0;
 
-    // Calculate category totals and payment methods
+    // Calculate category totals and payment methods (CURRENT MONTH ONLY)
     const categoryTotals: Record<string, number> = {};
-    
     processedReceipts.forEach(receipt => {
+      const receiptDate = new Date(receipt.date);
+      if (receiptDate.getMonth() !== currentMonth || receiptDate.getFullYear() !== currentYear) return;
       // First try to get the category from the receipt itself
-      // If not available, try to determine it from items
       let category = receipt.category;
-      
       if (!category && receipt.items && receipt.items.length > 0) {
-        // Try to get category from items if not set at receipt level
         const itemCategories = new Set<string>();
         receipt.items.forEach(item => {
           const itemCategory = item.category || categorizeItem(item.name);
@@ -215,23 +229,15 @@ const Insights = () => {
             itemCategories.add(itemCategory);
           }
         });
-        
-        // If all items have the same category, use that
         if (itemCategories.size === 1) {
           category = Array.from(itemCategories)[0];
         }
       }
-      
-      // Default to 'Others' if no category could be determined
       const finalCategory = category || 'Others';
-      
-      // Use the receipt's total_amount for the category total
       categoryTotals[finalCategory] = (categoryTotals[finalCategory] || 0) + (receipt.total_amount || 0);
     });
-    
     const topCategory = Object.entries(categoryTotals)
       .sort((a, b) => b[1] - a[1])[0];
-    
     const totalSpent = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
     const topCategoryPercentage = totalSpent > 0 ? Math.round((topCategory?.[1] / totalSpent) * 100) : 0;
     
@@ -296,8 +302,8 @@ const Insights = () => {
 
     // Calculate daily average
     const daysInMonth = new Date(
-      currentDate.getFullYear(), 
-      currentDate.getMonth() + 1, 
+      now.getFullYear(), 
+      now.getMonth() + 1, 
       0
     ).getDate();
     const averageDailySpend = currentMonthSpending / daysInMonth;
@@ -509,15 +515,60 @@ const Insights = () => {
     }
 
     return [
-      {
-        title: `Optimize ${insights.topCategory.name} Spending`,
-        description: `You've spent ${formatCurrency(insights.topCategory.amount)} on ${insights.topCategory.name.toLowerCase()} this month`,
-        impact: "",
-        priority: "high",
-        category: insights.topCategory.name,
-        amount: insights.topCategory.amount,
-        percentage: insights.topCategory.percentage
-      },      ...(insights.subscriptionCosts.count > 0 ? [{
+      (() => {
+        // Dynamic priority calculation for top category
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
+        const prevMonthName = prevMonthDate.toLocaleString('default', { month: 'short' });
+        // Find last month's spend for the same category
+        let prevMonthCategoryAmount = 0;
+        if (insights.topCategory?.name) {
+          // Sum all spending for the top category in the previous month
+          prevMonthCategoryAmount = receipts.reduce((sum, r) => {
+            const d = new Date(r.date);
+            if (d.getMonth() !== prevMonthDate.getMonth() || d.getFullYear() !== prevMonthDate.getFullYear()) return sum;
+            // If receipt category matches
+            if (r.category === insights.topCategory.name) {
+              return sum + (r.total_amount || 0);
+            }
+            // If items exist, sum up items in the top category
+            if (r.items && Array.isArray(r.items)) {
+              const itemSum = r.items
+                .filter(item => (item.category || categorizeItem(item.name)) === insights.topCategory.name)
+                .reduce((itemSum, item) => itemSum + (item.price * (item.quantity || 1)), 0);
+              return sum + itemSum;
+            }
+            return sum;
+          }, 0);
+        }
+        const currentAmount = insights.topCategory?.amount || 0;
+        let priority = 'medium';
+        if (prevMonthCategoryAmount === 0 && currentAmount > 0) {
+          priority = 'high';
+        } else if (prevMonthCategoryAmount > 0) {
+          const diff = currentAmount - prevMonthCategoryAmount;
+          const percent = (diff / prevMonthCategoryAmount) * 100;
+          if (percent > 5) priority = 'high';
+          else if (percent < -5) priority = 'low';
+          else priority = 'medium';
+        }
+        return {
+          title: `Optimize ${insights.topCategory.name} Spending`,
+          description: (
+            <span>
+              You've spent <span style={{ color: '#3b82f6', fontWeight: 600 }}>{formatCurrency(insights.topCategory.amount)}</span> on <span style={{ color: '#6366f1', fontWeight: 600 }}>{insights.topCategory.name.toLowerCase()}</span> this month
+            </span>
+          ),
+          impact: prevMonthCategoryAmount > 0 ? `Last month: ${formatCurrency(prevMonthCategoryAmount)}` : '',
+          priority,
+          category: insights.topCategory.name,
+          amount: insights.topCategory.amount,
+          percentage: insights.topCategory.percentage
+        };
+      })(),
+      ...(insights.subscriptionCosts.count > 0 ? [{
         title: "Review Subscriptions",
         description: `You have ${insights.subscriptionCosts.count} active subscriptions`,
         impact: `Monthly cost: ${formatCurrency(insights.subscriptionCosts.total)}`,

@@ -209,14 +209,24 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
     }, {} as Record<string, number>);
     
     // Calculate spending trend (comparing current month to previous month)
-    const months = Object.keys(monthlySpending).sort();
+    const months = Object.keys(monthlySpending);
     let trend = 0;
     if (months.length >= 2) {
-      const currentMonth = months[months.length - 1];
-      const prevMonth = months[months.length - 2];
-      const currentTotal = monthlySpending[currentMonth];
-      const prevTotal = monthlySpending[prevMonth];
-      trend = prevTotal ? Math.round(((currentTotal - prevTotal) / prevTotal) * 100) : 0;
+      // Sort months by calendar order
+      const currentYear = new Date().getFullYear();
+      const sortedMonths = months.map(m => ({
+        name: m,
+        index: new Date(`${m} 1, ${currentYear}`).getMonth()
+      })).sort((a, b) => a.index - b.index);
+      const now = new Date();
+      const currentMonthName = now.toLocaleString('default', { month: 'short' });
+      const currentMonthIdx = sortedMonths.findIndex(m => m.name === currentMonthName);
+      if (currentMonthIdx > 0) {
+        const prevMonthName = sortedMonths[currentMonthIdx - 1].name;
+        const currentTotal = monthlySpending[currentMonthName];
+        const prevTotal = monthlySpending[prevMonthName];
+        trend = prevTotal ? Math.round(((currentTotal - prevTotal) / prevTotal) * 100) : 0;
+      }
     }
     
     // Find top store by total spent
