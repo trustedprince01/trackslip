@@ -108,9 +108,9 @@ const Header = () => {
                 </NavigationMenuContent>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <NavigationMenuLink href="#pricing" className="text-sm font-radio text-white/90 hover:text-white transition-colors">
+                {/* <NavigationMenuLink href="#pricing" className="text-sm font-radio text-white/90 hover:text-white transition-colors">
                   Pricing
-                </NavigationMenuLink>
+                </NavigationMenuLink> */}
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>

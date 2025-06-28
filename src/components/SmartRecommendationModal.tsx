@@ -343,9 +343,9 @@ const SmartRecommendationModal: React.FC<SmartRecommendationModalProps> = ({
               {/* Action Buttons */}
               <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
                 <div className="flex gap-3">
-                  <Button className="flex-1" size="lg">
+                  {/* <Button className="flex-1" size="lg">
                     Set Budget & Save Plan
-                  </Button>
+                  </Button> */}
                   <Button 
                     variant="outline" 
                     size="lg"

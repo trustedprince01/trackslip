@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Home, History, Settings, Plus, Search, ArrowDown, Receipt, ShoppingBag, PieChart as PieChartIcon, BarChart } from "lucide-react";
+import { Home, History, Settings, Plus, Search, ArrowDown, Receipt as ReceiptIcon, ShoppingBag, PieChart as PieChartIcon, BarChart } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SpendingChart } from "@/components/SpendingChart";
 import { PieChart } from "@/components/PieChart";
@@ -17,14 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getCachedStoreLogo } from "@/utils/storeLogo";
 import { categorizeItems, getCategorySpending, Category, categorizeItem } from "@/utils/categoryUtils";
 import { InsightCard } from "@/components/InsightCard";
-
-type Receipt = {
-  id: string;
-  store_name: string;
-  total_amount: number;
-  date: string;
-  items?: Array<{ id: string; name: string; price: number; quantity: number }>;
-};
+import type { Receipt } from "@/types/receipt";
 
 function normalizeCategory(category: string | undefined): Category {
   if (!category) return 'Others';
@@ -352,6 +345,28 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
     navigate("/history");
   };
 
+  // Search state and filtered results
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Receipt[]>([]);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const query = searchQuery.toLowerCase();
+    const results = receipts.filter(receipt => {
+      // Match store name
+      if (receipt.store_name && receipt.store_name.toLowerCase().includes(query)) return true;
+      // Match any item name
+      if (receipt.items && receipt.items.some(item => item.name.toLowerCase().includes(query))) return true;
+      // Match amount
+      if (receipt.total_amount && receipt.total_amount.toString().includes(query)) return true;
+      return false;
+    });
+    setSearchResults(results);
+  }, [searchQuery, receipts]);
+  
   return (
     <div className="min-h-screen w-full flex justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black text-gray-900 dark:text-white overflow-hidden transition-colors duration-300">
       <div className="w-full max-w-[430px] flex flex-col h-screen relative">
@@ -381,9 +396,45 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
             <Search className="absolute left-4 top-3.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
             <input
               type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search store, item, amount..."
               className="w-full bg-white/80 dark:bg-gray-800/50 border border-gray-200/50 dark:border-gray-700/50 rounded-xl py-3 pl-12 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 backdrop-blur-sm"
             />
+            {searchQuery && searchResults.length > 0 && (
+              <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-20 max-h-64 overflow-y-auto">
+                {searchResults.map(result => {
+                  // Determine if query matches store or item
+                  const query = searchQuery.toLowerCase();
+                  const storeMatch = result.store_name && result.store_name.toLowerCase().includes(query);
+                  let matchedItems: string[] = [];
+                  if (!storeMatch && result.items && result.items.length > 0) {
+                    matchedItems = result.items
+                      .filter(item => item.name.toLowerCase().includes(query))
+                      .map(item => item.name);
+                  }
+                  return (
+                    <div
+                      key={result.id}
+                      className="flex items-center justify-between px-4 py-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-800/60 transition-colors"
+                      onClick={() => navigate(`/receipts/${result.id}`)}
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white text-sm">{result.store_name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {storeMatch
+                            ? null // Don't show items if searching by store
+                            : matchedItems.length > 0
+                              ? matchedItems.join(", ")
+                              : null}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-700 dark:text-gray-300 font-semibold">{formatCurrency(result.total_amount)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Summary Cards */}
@@ -452,7 +503,7 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-gray-600 dark:text-gray-400 text-xs">Receipts</span>
                   <div className="h-8 w-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <Receipt className="h-4 w-4 text-purple-500" />
+                    <ReceiptIcon className="h-4 w-4 text-purple-500" />
                   </div>
                 </div>
                 <p className="text-xl font-semibold text-purple-500">
@@ -578,7 +629,7 @@ const { totalTax, totalDiscount, categoryData } = useMemo(() => {
                               }}
                             />
                           ) : (
-                            <Receipt className="h-5 w-5 text-blue-500" />
+                            <ReceiptIcon className="h-5 w-5 text-blue-500" />
                           )}
                         </div>
                         <div>
