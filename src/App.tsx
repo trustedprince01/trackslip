@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -20,6 +19,9 @@ import Insights from "./pages/Insights";
 import SmartBudgeting from "./pages/SmartBudgeting";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import CookiePolicy from "./pages/CookiePolicy";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,6 +56,9 @@ function App() {
                     <Route path="/insights" element={<Insights />} />
                     <Route path="/smart-budgeting" element={<SmartBudgeting />} />
                   </Route>
+                  <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
+                  <Route path="/TermsOfService" element={<TermsOfService />} />
+                  <Route path="/CookiePolicy" element={<CookiePolicy />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>

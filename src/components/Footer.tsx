@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
@@ -86,9 +86,9 @@ const Footer = () => {
             &copy; {new Date().getFullYear()} TrackSlip. All rights reserved.
           </p>
           <div className="flex space-x-4 mt-4 md:mt-0">
-            <a href="#" className="text-gray-500 hover:text-trackslip-teal text-sm">Privacy Policy</a>
-            <a href="#" className="text-gray-500 hover:text-trackslip-teal text-sm">Terms of Service</a>
-            <a href="#" className="text-gray-500 hover:text-trackslip-teal text-sm">Cookie Policy</a>
+            <Link to="/PrivacyPolicy" className="text-gray-500 hover:text-trackslip-teal text-sm">Privacy Policy</Link>
+            <Link to="/TermsOfService" className="text-gray-500 hover:text-trackslip-teal text-sm">Terms of Service</Link>
+            <Link to="/CookiePolicy" className="text-gray-500 hover:text-trackslip-teal text-sm">Cookie Policy</Link>
           </div>
         </div>
       </div>

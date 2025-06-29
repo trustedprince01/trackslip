@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const features = [
@@ -56,15 +55,15 @@ const FeaturesSection = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-6 md:gap-12">
           {features.map((feature, index) => (
-            <div key={index} className="flex gap-6">
+            <div key={index} className="flex gap-4 md:gap-6">
               <div className="flex-shrink-0 gradient-blue-text">
                 {feature.icon}
               </div>
               <div>
-                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-gray-400">{feature.description}</p>
+                <h3 className="text-base md:text-xl font-bold mb-2 md:mb-3">{feature.title}</h3>
+                <p className="text-gray-400 text-xs md:text-base">{feature.description}</p>
               </div>
             </div>
           ))}

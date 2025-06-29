@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -41,9 +40,10 @@ const AppScreenshots = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll flex flex-col">
-            <CardContent className="p-1 flex-1">
+        {/* Responsive screenshot row: 3 columns on all screens, smaller on mobile */}
+        <div className="grid grid-cols-3 gap-2 md:gap-8">
+          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll flex flex-col p-1 md:p-0">
+            <CardContent className="p-0 flex-1">
               <div className="aspect-[9/16] overflow-hidden rounded-md">
                 <img 
                   src="/images/2.png" 
@@ -52,13 +52,12 @@ const AppScreenshots = () => {
                 />
               </div>
             </CardContent>
-            <div className="p-4 text-center">
-              <p className="text-gray-400 font-radio">Scan Receipt</p>
+            <div className="p-2 md:p-4 text-center">
+              <p className="text-gray-400 font-radio text-xs md:text-base">Scan Receipt</p>
             </div>
           </Card>
-          
-          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll flex flex-col">
-            <CardContent className="p-1 flex-1">
+          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll flex flex-col p-1 md:p-0">
+            <CardContent className="p-0 flex-1">
               <div className="aspect-[9/16] overflow-hidden rounded-md">
                 <img 
                   src="/images/4.png" 
@@ -67,13 +66,12 @@ const AppScreenshots = () => {
                 />
               </div>
             </CardContent>
-            <div className="p-4 text-center">
-              <p className="text-gray-400 font-radio">Analysis Screen</p>
+            <div className="p-2 md:p-4 text-center">
+              <p className="text-gray-400 font-radio text-xs md:text-base">Analysis Screen</p>
             </div>
           </Card>
-          
-          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll flex flex-col">
-            <CardContent className="p-1 flex-1">
+          <Card className="bg-black border border-white/10 overflow-hidden rounded-lg shadow-lg opacity-0 animate-on-scroll flex flex-col p-1 md:p-0">
+            <CardContent className="p-0 flex-1">
               <div className="aspect-[9/16] overflow-hidden rounded-md">
                 <img 
                   src="/images/1.png" 
@@ -82,8 +80,8 @@ const AppScreenshots = () => {
                 />
               </div>
             </CardContent>
-            <div className="p-4 text-center">
-              <p className="text-gray-400 font-radio">Dashboard View</p>
+            <div className="p-2 md:p-4 text-center">
+              <p className="text-gray-400 font-radio text-xs md:text-base">Dashboard View</p>
             </div>
           </Card>
         </div>
