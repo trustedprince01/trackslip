@@ -17,3 +17,8 @@ export function useIsMobile() {
 
   return !!isMobile
 }
+
+
+//<!--THIS WAS WRITTEN WAS PRINCE  -->
+//<!-- https://github.com/trustedprince01 -->
+//<!-- DONT REMOVE THIS LINE, IT ALREADY AUTH WITH THE CODE -->
